@@ -89,7 +89,7 @@ npm run build
 
 The audio generator creates deterministic **non-speech test fixtures** for scripted handlers. It refuses to overwrite existing audio; these fixtures must not be used to qualify real models.
 
-[CI](https://github.com/intreaction/call1-qa/actions/workflows/ci.yml) runs the Python suite, builds all three frontends, and exercises browser smoke tests in light and dark themes. It uses scripted handlers and does not download model weights. See [Development](docs/Development.md) for the complete browser suite and test configuration.
+[CI](https://github.com/intreaction/call1-qa/actions/workflows/ci.yml) keeps routine pushes fast: TypeScript checks, builds for all three apps, and a runtime dependency audit. For the full Python suite and light/dark browser smoke tests, choose **Run workflow → full_validation** in GitHub Actions. Tests stay in the repository and use scripted handlers without model weights. See [Development](docs/Development.md) for local test commands.
 
 | Guide | Covers |
 | --- | --- |

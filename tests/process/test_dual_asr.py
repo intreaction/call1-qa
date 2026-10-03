@@ -212,6 +212,12 @@ def test_the_whisper_entry_is_installed_only_with_the_pinned_tokenizer(tmp_path,
     assert paths.entry_status(entry)[0] is CatalogEntryStatus.INCOMPATIBLE
     assert paths.entry_detail(entry) == "needs CALL1_BACKEND=mlx (Apple Silicon)"
     monkeypatch.setenv("CALL1_BACKEND", "mlx")
+    # Runtime availability is independent of tokenizer/file validation. Exercise both
+    # hosts explicitly so this unit test needs no Apple-only packages on Linux.
+    monkeypatch.setattr(paths, "_importable", lambda module: False)
+    assert paths.entry_status(entry)[0] is CatalogEntryStatus.INCOMPATIBLE
+    monkeypatch.setattr(paths, "_importable", lambda module: True)
+    assert paths.entry_status(entry)[0] is CatalogEntryStatus.NOT_INSTALLED
     assert "multilingual.tiktoken does not match its pinned checksum" in paths.entry_detail(entry)
     assert "--models asr_vocabulary" in paths.entry_detail(entry)
     monkeypatch.setenv("CALL1_WHISPER_VOCAB_PATH", str(tmp_path / "elsewhere"))

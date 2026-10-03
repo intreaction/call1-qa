@@ -44,7 +44,7 @@ Generated fixtures must exist before starting the suite. `CALL1_E2E_ROOT` sets t
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on pushes to `main`, pull requests, and manual dispatch. Its two Linux jobs run the complete Python suite (real-model checks stay opt-in), TypeScript checks, all three frontend builds, and the browser smoke, metrics, demo-call, and model-pipeline specs in both themes. Actions are pinned to commits and the workflow has read-only repository permissions. CPU dependencies and scripted handlers require no model weights or external inference credentials.
+`.github/workflows/ci.yml` runs on pushes to `main`, pull requests, and manual dispatch. Routine runs perform TypeScript checks, all three frontend builds, and the runtime dependency audit. The Python and browser tests are retained but do not run on every push. To run them, choose **Run workflow** with **full_validation** enabled (or `gh workflow run ci.yml -f full_validation=true`). That manual run adds the complete Python suite and the browser smoke, metrics, demo-call, and model-pipeline specs in both themes; real-model checks remain opt-in locally. Actions are pinned to commits and the workflow has read-only repository permissions. CPU dependencies and scripted handlers require no model weights or external inference credentials.
 
 The browser job is a selected smoke suite, not every Playwright spec. Use `npm run test:e2e` locally for the full browser suite. Test reports are retained for seven days; runtime credentials and uploaded recordings must not be committed.
 

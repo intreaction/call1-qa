@@ -61,3 +61,14 @@ sample_audio/call_0*.wav
 
 # Generated non-speech test fixtures
 sample_audio/.test-audio.json
+
+# Model weights and local test reports (at any path)
+*.safetensors
+*.gguf
+*.ckpt
+*.pt
+*.pth
+*.onnx
+.pytest_cache/
+playwright-report/
+test-results/

@@ -15,6 +15,7 @@ import socket
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 from pathlib import Path
 
@@ -266,7 +267,7 @@ class _Run:
 
 @pytest.fixture
 def demo_dir():
-    base = Path("/private/tmp/call1-e2e")
+    base = Path(os.environ.get("CALL1_E2E_ROOT", str(Path(tempfile.gettempdir()) / "call1-e2e")))
     base.mkdir(parents=True, exist_ok=True)
     path = base / f"launch-demo-{int(time.time())}-{os.getpid()}-{secrets.token_hex(3)}"
     path.mkdir()

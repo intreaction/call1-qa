@@ -6,12 +6,14 @@ from __future__ import annotations
 
 import pytest
 
+from .stack import E2E_ROOT
+
 pytestmark = pytest.mark.e2e
 
 
 def test_servers_are_up_on_private_ports(stack):
     assert stack.store_port not in (8000, 8010, 8020) and stack.process_port not in (8000, 8010, 8020)
-    assert str(stack.dir).startswith("/private/tmp/call1-e2e/")
+    assert stack.dir.resolve().is_relative_to(E2E_ROOT)
 
     status = stack.store_get("/status")
     assert status.status_code == 200, status.text

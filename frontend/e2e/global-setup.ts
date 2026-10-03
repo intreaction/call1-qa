@@ -13,12 +13,13 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
-const E2E_ROOT = '/private/tmp/call1-e2e';
+const E2E_ROOT = process.env.CALL1_E2E_ROOT || path.join(os.tmpdir(), 'call1-e2e');
 
 function newestMtime(dir: string): number {
   let newest = 0;
@@ -48,7 +49,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   fs.mkdirSync(E2E_ROOT, { recursive: true });
   const runDir = fs.mkdtempSync(path.join(E2E_ROOT, `pw-run-${new Date().toISOString().replace(/[:.]/g, '').slice(0, 15)}-`));
   const infoFile = path.join(runDir, 'stack.json');
-  const python = process.env.CALL1_E2E_PYTHON || path.join(REPO, '.venv-local', 'bin', 'python');
+  const python = process.env.CALL1_E2E_PYTHON || (fs.existsSync(path.join(REPO, '.venv', 'bin', 'python')) ? path.join(REPO, '.venv', 'bin', 'python') : 'python3');
   const args = [path.join(REPO, 'tests', 'e2e', 'serve_stack.py'), '--name', 'playwright', '--info-file', infoFile];
   if (process.env.CALL1_E2E_HANDLERS === 'real') {
     args.push('--handlers', 'real');

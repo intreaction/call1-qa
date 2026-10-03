@@ -1,10 +1,10 @@
+import os from 'node:os';
+import path from 'node:path';
 import { defineConfig } from '@playwright/test';
 
-// Call1 browser e2e suite (e2e/README.md). The global setup starts a real Store + Process pair on
-// free ports (never 8000/8010/8020) with data under /private/tmp/call1-e2e/, and every test drives
-// the BUILT Evaluate that Store serves. The system Chrome is used (channel 'chrome'); no browser
-// is downloaded. Artifacts go to /private/tmp/call1-e2e/playwright/, outside the iCloud repo.
-const ARTIFACTS = '/private/tmp/call1-e2e/playwright';
+// Test real local services with scripted handlers; no model downloads or production data.
+const ARTIFACTS = path.join(process.env.CALL1_E2E_ROOT || path.join(os.tmpdir(), 'call1-e2e'), 'playwright');
+const CHANNEL = process.env.CALL1_E2E_BROWSER || (process.env.CI ? 'chromium' : 'chrome');
 
 // Unique per invocation by default: two runs that overlap (e.g. two writers testing in parallel)
 // used to share `test-results/`, which Playwright empties at the start of a run — a run in
@@ -27,7 +27,7 @@ export default defineConfig({
   workers: process.env.CALL1_E2E_WORKERS ? Number(process.env.CALL1_E2E_WORKERS) : 3,
   reporter: [['list'], ['html', { outputFolder: `${ARTIFACTS}/report`, open: 'never' }]],
   use: {
-    channel: 'chrome',
+    channel: CHANNEL,
     headless: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
@@ -36,7 +36,7 @@ export default defineConfig({
     navigationTimeout: 30_000,
   },
   projects: [
-    { name: 'dark', use: { channel: 'chrome', colorScheme: 'dark' } },
-    { name: 'light', use: { channel: 'chrome', colorScheme: 'light' } },
+    { name: 'dark', use: { channel: CHANNEL, colorScheme: 'dark' } },
+    { name: 'light', use: { channel: CHANNEL, colorScheme: 'light' } },
   ],
 });

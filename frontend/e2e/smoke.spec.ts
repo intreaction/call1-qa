@@ -1,11 +1,15 @@
 // Smoke test for the browser harness: servers up, an admin enrolled through Evaluate's UI with a
 // CLI setup code, a recording ingested through Process (fake handlers) appearing in Evaluate's
 // call list, and an invited reviewer enrolling from the link in a second browser context.
+import path from 'node:path';
+import os from 'node:os';
+import fs from 'node:fs';
 import { test, expect } from './fixtures';
 
 test('the stack is up on private ports', async ({ stack, storeURL, processApi, request }) => {
   for (const port of [stack.store_port, stack.process_port]) expect([8000, 8010, 8020]).not.toContain(port);
-  expect(stack.dir.startsWith('/private/tmp/call1-e2e/')).toBe(true);
+  const root = fs.realpathSync(process.env.CALL1_E2E_ROOT || path.join(os.tmpdir(), 'call1-e2e'));
+  expect(path.dirname(fs.realpathSync(stack.dir))).toBe(root);
 
   const status = await request.get(`${storeURL}/store/v1/status`);
   expect(status.ok()).toBe(true);

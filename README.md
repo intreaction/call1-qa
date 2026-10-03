@@ -1,36 +1,105 @@
 # Call1
 
-Local call-quality analysis with transcript evidence, configurable rubrics and human review.
+[![CI](https://github.com/intreaction/call1-qa/actions/workflows/ci.yml/badge.svg)](https://github.com/intreaction/call1-qa/actions/workflows/ci.yml)
 
-- **Process** imports recordings and runs transcription, speaker attribution, masking, analysis and scoring.
-- **Store** owns recordings, results, jobs, reviewer accounts and audit history.
-- **Evaluate** is the browser workspace for reviewing calls, coaching and metrics.
+**Turn call recordings into evidence your team can review.**
 
-The UI runs in your browser. Processing can run on your own Apple Silicon Mac using local models. There is no native desktop shell or installer in this source distribution.
+Call1 is a local call-quality analysis project with searchable transcripts, configurable QA rubrics, contact signals, and human review. Try the browser demo with scripted results, or run local models on an Apple Silicon Mac to process recordings.
 
-## Run the demo
+## What you can do
 
-Use Python 3.12 or newer and FFmpeg on your PATH. From the repository root:
+- **Follow a recording through processing.** Inspect transcription, speaker attribution, personal-information masking, tone, sentiment, scoring, and summary jobs.
+- **Review the evidence.** Play audio, jump from a quoted finding to its transcript turn, and search conversations by meaning.
+- **Define quality for your team.** Configure weighted criteria and policy context, test an unpublished rubric, and record explained reviewer overrides.
+- **Find coaching opportunities.** Review caller needs, issues, outcomes, alerts, and aggregate quality trends.
+- **Explore peer comparisons.** Fictional center benchmarks illustrate the concept; live cross-organization comparisons are not connected.
+
+![Call1 peer comparison demo showing a fictional center's quality trend](docs/images/peer-comparison.jpg)
+
+*Illustrative benchmark data, separate from your center's actual results.*
+
+## Try the demo
+
+You need **Python 3.12** and **FFmpeg** on your PATH. Node.js is only needed for frontend development; built web assets are included. Model weights and API keys are not required for the scripted demo.
 
 ```sh
+git clone https://github.com/intreaction/call1-qa.git
+cd call1-qa
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m call1.launch --demo --handlers fake
 ```
 
-The launcher prints and opens Evaluate, the Store console and the credential-bearing Process console URL. Keep that Process URL private. Demo sign-in and 560 fictional historical sessions are available locally. Fake handlers produce scripted results; they do not measure model accuracy. Peer-center comparisons are illustrative.
+The launcher opens three browser pages:
 
-The committed frontend builds let you start without Node.js. For real inference, install the MLX requirements and provision the models described in [Operations](docs/Operations.md). The Process demo studio includes an attributed AppTek role-play excerpt for an actual processing run when models are configured.
+| App | Default address | Purpose |
+| --- | --- | --- |
+| Evaluate | http://localhost:8010/ | Call library, review, rubrics, signals, and metrics |
+| Process | http://127.0.0.1:8020/ | Import recordings and inspect processing |
+| Store console | http://localhost:8010/console/ | Service health and operational state |
 
-## Develop and verify
+Choose **Continue as Demo Admin** in Evaluate. Explore the 560 fictional historical sessions, then open **Process → Import → Process demo call** to follow a new recording through the pipeline. With `--handlers fake`, analysis is scripted; it demonstrates the workflow and does not measure model accuracy.
 
-See [Development](docs/Development.md) for frontend builds, generated test audio and test commands. See [Architecture](docs/Architecture.md) for component boundaries and [Operations](docs/Operations.md) for startup, credentials and local data.
+Use the **Process link printed by the launcher**, including its console credential. A bare Process URL opens without write access. Keep that credential link private. Press **Ctrl-C** in the terminal to stop the services. Use `--no-open` to open the pages yourself.
 
-## Scope and attribution
+Demo data stays in `data/demo/`. Demo sign-in is intended for localhost and fictional data; regular installations use the account/passkey flow.
 
-This source snapshot includes the current three-app product, shared inference code, relevant tests and required assets/notices. Native macOS packaging, the old combined server/UI, private course submissions, business plans, research dumps and model weights are excluded. Commercial hosting, subscriptions and cross-organization benchmarking remain proposed features.
+## Process real recordings
 
-Built by John Wheeler, Ryan Wolff and Cameron Anthony for the CIS 568 team project. Technical implementation and system design: John; market and competitive analysis: Ryan; business and financial analysis: Cameron.
+Real inference runs with separately installed models. On Apple Silicon, install `requirements-mlx.txt`, provision the weights, and follow [Operations](docs/Operations.md) for configuration and model paths.
 
-Core open-source licensing remains pending; this snapshot does not grant an Apache-2.0 license. Preserve [third-party notices](THIRD_PARTY_NOTICES.md) and the component-specific licenses. See [License status](docs/LicenseStatus.md).
+```sh
+CALL1_BACKEND=mlx python -m call1.launch --demo --handlers real
+```
+
+The included AppTek recording is an attributed 15.5-second role-play excerpt. It demonstrates processing, search, and review, but a mid-call excerpt cannot establish whether an opening disclosure or closing occurred. Use complete recordings you are authorized to process when assessing a full-call rubric.
+
+Model output requires judgment. Masking can miss personal information, speech and speaker labels can be wrong, and QA findings need context. Call1 preserves the machine score and records reviewer overrides separately; it is not a compliance certification.
+
+## How it fits together
+
+```mermaid
+flowchart LR
+    A[Call recording] --> P[Process: local inference]
+    P <--> S[Store: recordings, jobs and results]
+    S <--> E[Evaluate: browser review and metrics]
+    E --> H[Human review and coaching]
+```
+
+Process performs inference; Store owns persistent records and job state; Evaluate provides the review workspace. The current distribution runs as local services with a browser UI. Hosted subscriptions and shared industry benchmarks remain proposed features.
+
+Model weights, uploaded recordings, runtime data, and credentials are excluded from Git. Third-party model and dataset licenses still apply to separate downloads.
+
+## Develop and test
+
+With the virtual environment activated:
+
+```sh
+python -m pip install -r requirements-dev.txt
+python scripts/generate_test_audio.py
+python -m pytest tests -q
+
+cd frontend
+npm ci
+npm run typecheck
+npm run typecheck:e2e
+npm run build
+```
+
+The audio generator creates deterministic **non-speech test fixtures** for scripted handlers. It refuses to overwrite existing audio; these fixtures must not be used to qualify real models.
+
+[CI](https://github.com/intreaction/call1-qa/actions/workflows/ci.yml) runs the Python suite, builds all three frontends, and exercises browser smoke tests in light and dark themes. It uses scripted handlers and does not download model weights. See [Development](docs/Development.md) for the complete browser suite and test configuration.
+
+| Guide | Covers |
+| --- | --- |
+| [Architecture](docs/Architecture.md) | Component boundaries and data flow |
+| [Operations](docs/Operations.md) | Demo startup, real inference, credentials, and data |
+| [Development](docs/Development.md) | Builds, tests, and API contracts |
+| [License status](docs/LicenseStatus.md) | Source licensing and third-party components |
+
+## Team and licensing
+
+Built for the CIS 568 team project by **John Wheeler, Ryan Wolff, and Cameron Anthony**. John led technical implementation and system design; Ryan covered market and competitive analysis; Cameron covered business and financial analysis.
+
+Core licensing remains pending: public visibility does not grant an open-source license. See [third-party notices](THIRD_PARTY_NOTICES.md) for separately licensed code, fonts, model components, and AppTek materials.

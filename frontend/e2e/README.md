@@ -1,7 +1,7 @@
 # Browser end-to-end tests (Playwright)
 
 These tests drive the **built** Evaluate that a real Store serves, with a real Process behind it,
-in the system Chrome (`channel: 'chrome'`; no browser is downloaded). Passkeys come from a **CDP
+in system Chrome locally or Playwright Chromium in CI (`CALL1_E2E_BROWSER` selects the channel). Passkeys come from a **CDP
 virtual authenticator** in each page. The Python harness,
 [`tests/e2e/`](../../tests/e2e/README.md), starts the servers.
 
@@ -13,16 +13,18 @@ CALL1_E2E_KEEP=1 npm --prefix frontend run test:e2e         # keep the stack dir
 npm --prefix frontend run typecheck:e2e                     # tsc over e2e/ and playwright.config.ts
 ```
 
+The temporary directory shown below is `CALL1_E2E_ROOT` when set, otherwise the system temporary directory plus `call1-e2e`. The Python interpreter is `CALL1_E2E_PYTHON`, then `.venv/bin/python` when available, then `python3`.
+
 Before you start:
 
 - **The build is what gets tested.** Store serves `call1/store/static/evaluate/`. The global setup
   warns when `frontend/src/apps/evaluate` is newer than that build. Run
   `npm --prefix frontend run build:evaluate` only when you mean to test newer source.
-- **Artifacts** go to `/private/tmp/call1-e2e/playwright/`: `test-results/<run-id>/` (traces and
+- **Artifacts** go to `<temporary-directory>/call1-e2e/playwright/`: `test-results/<run-id>/` (traces and
   screenshots on failure — `outputDir` is unique per invocation by default, so overlapping runs
   never empty each other's in-flight files; set `CALL1_E2E_RUN_ID` to pin one, or pass `--output`
   to override it outright) and `report/`. Open the report with
-  `npx playwright show-report /private/tmp/call1-e2e/playwright/report`. The Store and Process
+  `npx playwright show-report <temporary-directory>/call1-e2e/playwright/report`. The Store and Process
   logs are in the stack dir printed at start-up, under `logs/`. Set `CALL1_E2E_KEEP=1` to keep them.
 - **Settings:** 3 workers (`CALL1_E2E_WORKERS=n` changes it), files run in parallel and tests
   within a file in order, test timeout 90 s, `expect` timeout 15 s.
@@ -31,10 +33,10 @@ Before you start:
 
 ## How the stack starts
 
-`e2e/global-setup.ts` runs `.venv-local/bin/python tests/e2e/serve_stack.py --info-file
+`e2e/global-setup.ts` runs `.venv/bin/python tests/e2e/serve_stack.py --info-file
 <run>/stack.json`. That starts one Store and Process pair for the whole run, with fake handlers,
-free ports (never 8000, 8010 or 8020) and data in `/private/tmp/call1-e2e/playwright-…/`. It
-exports `CALL1_E2E_STACK_FILE` and `CALL1_E2E_RUN_DIR`, a `/private/tmp/call1-e2e/pw-run-…/`
+free ports (never 8000, 8010 or 8020) and data in `<temporary-directory>/call1-e2e/playwright-…/`. It
+exports `CALL1_E2E_STACK_FILE` and `CALL1_E2E_RUN_DIR`, a `<temporary-directory>/call1-e2e/pw-run-…/`
 directory that holds shared credentials, locks and state. Teardown closes the helper's stdin; it
 stops both servers and both directories are deleted.
 

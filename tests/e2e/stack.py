@@ -34,6 +34,7 @@ import socket
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 import uuid
 import wave
@@ -46,7 +47,7 @@ from .softauthn import SoftAuthenticator
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLES = REPO / "sample_audio"
-E2E_ROOT = Path(os.environ.get("CALL1_E2E_ROOT", "/private/tmp/call1-e2e"))
+E2E_ROOT = Path(os.environ.get("CALL1_E2E_ROOT", str(Path(tempfile.gettempdir()) / "call1-e2e"))).resolve()
 RESERVED_PORTS = frozenset({8000, 8010, 8020})
 """The user's live legacy app, Store and Process. A stack never binds them."""
 

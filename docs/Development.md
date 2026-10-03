@@ -1,6 +1,6 @@
 # Development
 
-Use Python 3.12+, Node.js 22+ for frontend work, and FFmpeg on PATH. Install `requirements.txt` (or `requirements-mlx.txt` for Apple Silicon inference) and `requirements-dev.txt` into a virtual environment.
+Use Python 3.12, Node.js 22+ for frontend work, and FFmpeg on PATH. Install `requirements.txt` (or `requirements-mlx.txt` for Apple Silicon inference) and `requirements-dev.txt` into a virtual environment.
 
 ## Frontend
 
@@ -33,7 +33,20 @@ cd frontend
 CALL1_E2E_PYTHON="$(pwd)/../.venv/bin/python" npm run test:e2e
 ```
 
-The browser suite uses installed Google Chrome. Generated fixtures must exist before starting it. Test stacks keep data outside the repository.
+The browser suite uses installed Google Chrome locally. To use Playwright Chromium instead:
+
+```sh
+npx playwright install chromium
+CALL1_E2E_BROWSER=chromium CALL1_E2E_PYTHON="$(pwd)/../.venv/bin/python" npm run test:e2e
+```
+
+Generated fixtures must exist before starting the suite. `CALL1_E2E_ROOT` sets the temporary data/report directory; by default it is `call1-e2e` under the operating system's temporary directory. No repository data is used.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on pushes to `main`, pull requests, and manual dispatch. Its two Linux jobs run the complete Python suite (real-model checks stay opt-in), TypeScript checks, all three frontend builds, and the browser smoke, metrics, demo-call, and model-pipeline specs in both themes. Actions are pinned to commits and the workflow has read-only repository permissions. CPU dependencies and scripted handlers require no model weights or external inference credentials.
+
+The browser job is a selected smoke suite, not every Playwright spec. Use `npm run test:e2e` locally for the full browser suite. Test reports are retained for seven days; runtime credentials and uploaded recordings must not be committed.
 
 Real-model tests are opt-in with `CALL1_REAL_MODELS=1`, require appropriate weights and real recordings matching their expected transcript fixtures, and must not be run on generated tones. The removed speech recordings are not included in this source snapshot; real-model qualification needs a separately cleared fixture set.
 

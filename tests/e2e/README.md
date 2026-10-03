@@ -7,16 +7,18 @@ authenticator. Nothing is minted and nothing runs in-process. The browser suite 
 [`frontend/e2e/`](../../frontend/e2e/README.md) uses the same stack through `serve_stack.py`.
 
 ```bash
-.venv-local/bin/python -m pytest tests/e2e -q -p no:warnings            # fake handlers, a few seconds
-.venv-local/bin/python -m pytest tests -m "not e2e" -q -p no:warnings   # everything else
-CALL1_REAL_MODELS=1 .venv-local/bin/python -m pytest tests/e2e -m real_models -s -p no:warnings   # Apple Silicon
-CALL1_E2E_KEEP=1 .venv-local/bin/python -m pytest tests/e2e -q            # keep data and logs for a post-mortem
+.venv/bin/python -m pytest tests/e2e -q -p no:warnings            # fake handlers, a few seconds
+.venv/bin/python -m pytest tests -m "not e2e" -q -p no:warnings   # everything else
+CALL1_REAL_MODELS=1 .venv/bin/python -m pytest tests/e2e -m real_models -s -p no:warnings   # Apple Silicon
+CALL1_E2E_KEEP=1 .venv/bin/python -m pytest tests/e2e -q            # keep data and logs for a post-mortem
 ```
+
+Set `CALL1_E2E_ROOT` to override the default system temporary directory plus `call1-e2e`.
 
 ## Ground rules
 
-- **Temp data lives under `/private/tmp/call1-e2e/<name>-<time>-<pid>-<hex>/`**, never in the
-  repo, which is in iCloud Drive. That covers Store data, Process config and data, logs and
+- **Temp data lives under `<temporary-directory>/call1-e2e/<name>-<time>-<pid>-<hex>/`**, never in the
+  repository. That covers Store data, Process config and data, logs and
   uploaded copies. The directory is deleted at teardown unless `CALL1_E2E_KEEP=1` is set.
 - **Ports are chosen at runtime** and are never 8000, 8010 or 8020, because the user's live apps
   run there.
@@ -39,7 +41,7 @@ CALL1_E2E_KEEP=1 .venv-local/bin/python -m pytest tests/e2e -q            # keep
   ps aux | grep -E "call1\.(store|process) serve" | grep -v grep   # find the PIDs
   kill <store-pid> <process-pid>                                    # SIGTERM, same as a clean stop
   ```
-  An orphaned pair's data lives under `/private/tmp/call1-e2e/<name>-<time>-<pid>-<hex>/`, so it is
+  An orphaned pair's data lives under `<temporary-directory>/call1-e2e/<name>-<time>-<pid>-<hex>/`, so it is
   safe to remove that directory too once the processes are gone. This does not affect the user's
   live apps on 8000/8010/8020: stack ports are always chosen at runtime, never those three.
 
@@ -164,7 +166,7 @@ minutes.
 ## `serve_stack.py`
 
 ```bash
-.venv-local/bin/python tests/e2e/serve_stack.py [--handlers fake|real] [--real-models] \
+.venv/bin/python tests/e2e/serve_stack.py [--handlers fake|real] [--real-models] \
     [--fake-behavior JSON] [--store-parameters JSON] [--process-config JSON] [--name N] [--info-file PATH] [--keep]
 ```
 

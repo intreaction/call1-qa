@@ -1,0 +1,6 @@
+# Generator pins for the committed openapi.json and store-v1.ts (call1.contracts.api.GENERATOR_PINS).
+# Use it as a pip constraints file so the drift tests run against the pinned generators:
+#   pip install -r requirements.txt -c call1/contracts/constraints.txt
+# tests/test_contracts.py checks that these lines match GENERATOR_PINS.
+fastapi==0.141.*
+pydantic==2.13.*

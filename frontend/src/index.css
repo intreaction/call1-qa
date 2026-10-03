@@ -1,0 +1,820 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Call1 palette tokens — "Ink & Signal" (dark, default) plus "Frost & Ink" (light).
+   Rooted in the identity palette:
+     Ink:     #08101a
+     Frost:   #e9eef2
+     Cyan:    #1fc7f9
+     Mint:    #1ff981
+     Magenta: #c81ff9
+   Every color in the UI resolves through these variables, so [data-theme] switches
+   the whole surface consistently. */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces — deep rich ink ground */
+  --canvas: #08101a;
+  --canvas-subtle: #101824;
+  --canvas-inset: #050a11;
+  /* Borders: decorative / muted / interactive-control (≥3:1 vs adj. bg) */
+  --border: #1d283a;
+  --border-muted: #151e2c;
+  --border-control: #546682;
+  /* Typography — crisp frost ink */
+  --fg: #e9eef2;
+  --fg-muted: #8e9cb0;
+  --fg-subtle: #6d7c92;
+  /* Accent cyan (#1fc7f9) = primary/agent/seek */
+  --primer-blue: #1fc7f9;
+  --primer-blueHover: #47d4fa;
+  --primer-blueFg: #7be2fc;
+  --primer-blueSubtle: rgba(31, 199, 249, 0.12);
+  --primer-blueBorder: rgba(31, 199, 249, 0.35);
+  /* Status mint (#1ff981) */
+  --primer-green: #17a356;
+  --primer-greenFg: #1ff981;
+  --primer-greenSubtle: rgba(31, 249, 129, 0.12);
+  --primer-greenBorder: rgba(31, 249, 129, 0.35);
+  --primer-greenHover: rgba(31, 249, 129, 0.16);
+  /* Status magenta (#c81ff9) */
+  --primer-magenta: #a81cd2;
+  --primer-magentaFg: #d75bfb;
+  --primer-magentaSubtle: rgba(200, 31, 249, 0.12);
+  --primer-magentaBorder: rgba(200, 31, 249, 0.35);
+  /* Status red / breach */
+  --primer-red: #a8352b;
+  --primer-redFg: #f06c62;
+  --primer-redSubtle: rgba(240, 108, 98, 0.12);
+  --primer-redBorder: rgba(240, 108, 98, 0.35);
+  --primer-redHover: rgba(240, 108, 98, 0.16);
+  /* Status yellow / escalation */
+  --primer-yellow: #8a6a1c;
+  --primer-yellowFg: #e3b341;
+  --primer-yellowSubtle: rgba(227, 179, 65, 0.12);
+  --primer-yellowBorder: rgba(227, 179, 65, 0.35);
+  /* Caller amber / agent cyan chips */
+  --primer-caller: #e2a05c;
+  --primer-callerFg: #f1c68f;
+  --primer-callerSubtle: rgba(226, 160, 92, 0.12);
+  --primer-callerBorder: rgba(226, 160, 92, 0.35);
+  --primer-agentBg: #0c2b36;
+  --primer-callerBg: #2b1f10;
+  /* rgb triplets for Tailwind opacity modifiers (bg-canvas/60, border/60)
+     and runtime rgba() accents (space-separated) */
+  --canvas-rgb: 8 16 26;
+  --canvas-subtle-rgb: 16 24 36;
+  --border-rgb: 29 40 58;
+  --fg-rgb: 233 238 242;
+  --fg-muted-rgb: 142 156 176;
+  --primer-blue-rgb: 31 199 249;
+  --primer-blueFg-rgb: 123 226 252;
+  --primer-yellow-rgb: 227 179 65;
+  --primer-caller-rgb: 226 160 92;
+  /* Focus ring colors (≥3:1 vs every surface on each theme) */
+  --focus-ring: #1fc7f9;
+  --focus-ring-on-accent: #08101a;
+  /* Text on filled accent buttons */
+  --accent-fg: #08101a;
+  /* Chrome */
+  --scrollbar-thumb: #1d283a;
+  --scrollbar-thumb-hover: #2b3a52;
+  --modal-backdrop: rgba(8, 16, 26, 0.75);
+  --panel-shadow: rgba(0, 0, 0, 0.55);
+  --deck-sheen: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Frost canvas — clean, crisp, cool frost aligned with #e9eef2 */
+  --canvas: #eef2f6;
+  --canvas-subtle: #e2e8ef;
+  --canvas-inset: #ffffff;
+  --border: #c4cfdb;
+  --border-muted: #d7e0e8;
+  --border-control: #556679; /* ≥3:1 vs adjacent bg */
+  --fg: #08101a;           /* Exact identity ink */
+  --fg-muted: #4b5a6c;     /* ≥4.5:1 on --canvas / --canvas-subtle */
+  --fg-subtle: #5c6c7f;    /* ≥4.5:1 on --canvas */
+  /* Accent cyan: darkened so text AND filled controls meet AA on frost */
+  --primer-blue: #056e8f;
+  --primer-blueHover: #045a75;
+  --primer-blueFg: #056e8f;
+  --primer-blueSubtle: #d6f4fc;
+  --primer-blueBorder: #38bdf8;
+  --primer-green: #0d7d4d;
+  --primer-greenFg: #09683e;   /* ≥4.5:1 on --canvas */
+  --primer-greenSubtle: #d7fae9;
+  --primer-greenBorder: #4ade80;
+  --primer-greenHover: #bbf7d0;
+  --primer-magenta: #9b18c2;
+  --primer-magentaFg: #8212a4; /* ≥4.5:1 on --canvas */
+  --primer-magentaSubtle: #fae8ff;
+  --primer-magentaBorder: #e879f9;
+  --primer-red: #b52d23;
+  --primer-redFg: #a1231a;   /* ≥4.5:1 on --canvas, subtle, and hover fills */
+  --primer-redSubtle: #fde8e7;
+  --primer-redBorder: #f87171;
+  --primer-redHover: #fcd5d3;
+  --primer-yellow: #8a6a1c;
+  --primer-yellowFg: #7c5c00;
+  --primer-yellowSubtle: #fef9c3;
+  --primer-yellowBorder: #facc15;
+  --primer-caller: #b45309;
+  --primer-callerFg: #92400e;
+  --primer-callerSubtle: #fef3c7;
+  --primer-callerBorder: #fcd34d;
+  --primer-agentBg: #d6f4fc;
+  --primer-callerBg: #fef3c7;
+  --canvas-rgb: 238 242 246;
+  --canvas-subtle-rgb: 226 232 239;
+  --border-rgb: 196 207 219;
+  --fg-rgb: 8 16 26;
+  --fg-muted-rgb: 75 90 108;
+  --primer-blue-rgb: 5 110 143;
+  --primer-blueFg-rgb: 5 110 143;
+  --primer-yellow-rgb: 124 92 0;
+  --primer-caller-rgb: 180 83 9;
+  --focus-ring: #056e8f;
+  --focus-ring-on-accent: #ffffff;
+  --accent-fg: #ffffff;
+  --scrollbar-thumb: #c4cfdb;
+  --scrollbar-thumb-hover: #aab8c7;
+  --modal-backdrop: rgba(8, 16, 26, 0.45);
+  --panel-shadow: rgba(8, 16, 26, 0.18);
+  --deck-sheen: rgba(255, 255, 255, 0.7);
+}
+
+/* Native macOS desktop client: leave room for window traffic light buttons */
+header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.is-native-app header {
+  padding-left: 82px !important;
+  padding-top: max(env(safe-area-inset-top, 0px), 8px) !important;
+  padding-bottom: 8px !important;
+  min-height: 52px;
+  -webkit-app-region: drag;
+}
+.is-native-app header button,
+.is-native-app header nav,
+.is-native-app header input,
+.is-native-app header a {
+  -webkit-app-region: no-drag;
+}
+
+@layer base {
+  /* IBM Plex Sans © 2017 IBM Corp., SIL OFL 1.1 — static/fonts/OFL.txt.
+     Self-hosted WOFF2; no external runtime font requests. */
+  @font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('/fonts/IBM-Plex-Sans-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('/fonts/IBM-Plex-Sans-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('/fonts/IBM-Plex-Sans-SemiBold.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--fg);
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.002em;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+  input[type='range'] {
+    accent-color: var(--primer-blue);
+  }
+
+  /* "IBM Plex Sans only" (docs/SplitBuild.md Design principles) — Evaluate, the Store console and
+     Process only. These elements carry a monospace default in every browser's UA stylesheet even
+     with no class at all, so a bare <code>/<kbd>/<pre>/<samp> (e.g. the Store console's Coverage
+     panel) would otherwise render in the platform's monospace font; inherit the surrounding sans
+     stack instead. Scoped to `.call1-app` (the three new apps' `<body>`, set in evaluate.html,
+     store-console.html, process.html) so the legacy app's build is unchanged (judge condition 5,
+     2026-09-25): its own bare <kbd>/<code> (Header.tsx, RubricStudioView.tsx) keep the platform
+     monospace font exactly as before the split. `font-mono` is plain Tailwind (not remapped) for
+     the same reason — see tailwind.config.js — so don't reach for it in the three new apps. */
+  .call1-app code,
+  .call1-app kbd,
+  .call1-app pre,
+  .call1-app samp {
+    font-family: inherit;
+  }
+
+  /* Keyboard focus always visible on interactive controls. Accent-filled
+     buttons (teal bg) use the theme's on-accent ring instead so the ring
+     stays ≥3:1 on every theme. */
+  button:focus-visible,
+  a:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+  .bg-primer-blue:focus-visible,
+  .bg-primer-blueHover:focus-visible {
+    outline: 2px solid var(--focus-ring-on-accent);
+  }
+}
+
+@layer components {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Typography role tokens (Ink & Signal hierarchy) */
+  .ui-title {
+    font-size: 16px;
+    line-height: 1.5;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .ui-body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .ui-meta {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .ui-caption {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--fg-muted);
+  }
+  .ui-transcript {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .ui-nav {
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+  .ui-button {
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+
+  /* Timeline vertical line */
+  .timeline-container {
+    position: relative;
+  }
+  .timeline-container::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    bottom: 24px;
+    left: 17px;
+    width: 2px;
+    background-color: var(--border-muted);
+    z-index: 0;
+  }
+
+  .active-turn-highlight {
+    border-color: var(--primer-blue) !important;
+    background-color: rgba(var(--primer-blue-rgb) / 0.08) !important;
+  }
+
+  .quote-mark {
+    background-color: rgba(var(--primer-yellow-rgb) / 0.16);
+    border-bottom: 2px solid var(--primer-yellowFg);
+    color: var(--fg);
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+
+  /* Call list rows: keyboard-focusable, active state */
+  .call-row {
+    border-left: 2px solid transparent;
+    outline: none;
+  }
+  .call-row:hover {
+    background: rgba(var(--canvas-subtle-rgb) / 0.6);
+  }
+  .call-row.active {
+    background: var(--canvas-subtle);
+    border-left-color: var(--primer-blue);
+  }
+  .call-row:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  /* Verdict cards: keyboard-focusable */
+  .verdict-card {
+    outline: none;
+  }
+  .verdict-card:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  /* Atomic palette swap: while [data-theme] is being flipped, color
+     transitions are suppressed so the whole token set lands in one style
+     pass instead of every utility interpolating from the old palette. */
+  .theme-switching .transition-colors {
+    transition: none !important;
+  }
+
+  /* Per-call summary: compact, capped height so it doesn't crowd the
+     transcript. Collapse/expand animates max-height (180ms); the collapsed
+     state also sets inert so the content leaves the focus/a11y tree. */
+  .summary-body {
+    max-height: 180px;
+    overflow-y: auto;
+    transition: max-height 180ms ease;
+  }
+  .summary-body.summary-collapsed {
+    max-height: 0;
+    overflow: hidden;
+  }
+  @media (max-width: 1023px) {
+    .summary-body {
+      max-height: 140px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .summary-body {
+      transition: none;
+    }
+  }
+
+  /* Keycap */
+  .kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--fg-muted);
+    background: var(--canvas-subtle);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+  }
+
+  /* Native search dialog */
+  #modal-search::backdrop {
+    background: var(--modal-backdrop);
+  }
+  /* Tailwind's flex class would override the UA's closed-dialog display:none */
+  #modal-search:not([open]) {
+    display: none;
+  }
+
+  /* Collapsible call sidebar on narrow viewports */
+  #view-workbench {
+    position: relative;
+  }
+  #call-sidebar {
+    position: relative;
+  }
+  @media (max-width: 1023px) {
+    #call-sidebar {
+      display: none;
+      position: absolute;
+      inset: 0 auto 0 0;
+      z-index: 30;
+      width: 15rem;
+      box-shadow: 8px 0 24px var(--panel-shadow);
+    }
+    #call-sidebar.open {
+      display: flex;
+    }
+
+    /* Mobile scorecard: a collapsed-by-default right-hand drawer that
+       overlays the transcript instead of stacking beneath it. */
+    #section-scorecard {
+      display: none;
+      position: absolute;
+      inset: 0 0 0 auto;
+      z-index: 20;
+      width: min(340px, 100%);
+      box-shadow: -8px 0 24px var(--panel-shadow);
+    }
+    #section-scorecard.open {
+      display: flex;
+    }
+  }
+}
+
+/* --- fabric-waveform.css (ported) — Three.js waveform deck chrome --- */
+.fabric-deck {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: visible;
+  background: radial-gradient(ellipse at 25% 20%, rgba(var(--primer-blue-rgb) / 0.09), transparent 60%),
+    radial-gradient(ellipse at 85% 80%, rgba(var(--primer-caller-rgb) / 0.08), transparent 60%),
+    var(--canvas);
+  box-shadow: inset 0 1px var(--deck-sheen);
+  color: var(--fg);
+}
+
+/* Expanded at the top of the transcript; slightly compact while scrolled. */
+.fabric-stage {
+  position: relative;
+  height: 128px;
+  touch-action: pan-y;
+  cursor: crosshair;
+  background: linear-gradient(rgba(var(--primer-blueFg-rgb) / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--primer-blueFg-rgb) / 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  outline: none;
+  transition: height 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fabric-deck.fabric-scrolled .fabric-stage {
+  height: 80px;
+}
+/* Detail drawer: the stage yields height so the deck stays bounded. */
+.fabric-deck.fabric-info-open .fabric-stage {
+  height: 64px;
+}
+.fabric-deck.fabric-scrolled.fabric-info-open .fabric-stage {
+  height: 48px;
+}
+.fabric-stage:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+}
+.fabric-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.fabric-playhead,
+.fabric-hoverline {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: linear-gradient(transparent, var(--primer-blue), transparent);
+  pointer-events: none;
+  left: 4%;
+  box-shadow: 0 0 8px rgba(var(--primer-blue-rgb) / 0.27);
+}
+.fabric-playhead:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primer-blueFg);
+  box-shadow: 0 0 8px var(--primer-blue);
+}
+.fabric-hoverline {
+  background: linear-gradient(transparent, rgba(var(--fg-muted-rgb) / 0.53), transparent);
+  opacity: 0;
+}
+.fabric-tip {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(var(--canvas-subtle-rgb) / 0.96);
+  font: 12px 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  color: var(--fg);
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+}
+
+/* Transport row: play/time/speed inside the deck, always visible. */
+.fabric-transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-muted);
+  background: var(--canvas);
+}
+.fabric-transport .fabric-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--border-control);
+  border-radius: 6px;
+  background: var(--canvas-subtle);
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.fabric-transport select {
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+}
+.fabric-transport select option {
+  background: var(--canvas-subtle);
+  color: var(--fg);
+}
+@media (max-width: 600px) {
+  .fabric-transport {
+    gap: 8px;
+  }
+  .fabric-transport .fabric-speed {
+    padding: 2px 6px;
+  }
+}
+
+/* Footer: visible at the top, tucked away while scrolled. */
+.fabric-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0 12px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 200ms ease, opacity 200ms ease, padding 200ms ease;
+}
+.fabric-deck:not(.fabric-scrolled) .fabric-footer {
+  max-height: 44px;
+  opacity: 1;
+  padding: 0 12px 10px;
+}
+.fabric-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .fabric-legend {
+    display: none;
+  }
+  .fabric-deck:not(.fabric-scrolled) .fabric-footer {
+    max-height: 40px;
+  }
+}
+.fabric-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fabric-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primer-blue);
+  box-shadow: 0 0 6px rgba(var(--primer-blue-rgb) / 0.27);
+}
+.fabric-dot.caller {
+  background: var(--primer-caller);
+  box-shadow: 0 0 6px rgba(var(--primer-caller-rgb) / 0.35);
+}
+
+/* Detail panel: bounded drawer, always visible while open. */
+.fabric-info {
+  border-top: 1px solid var(--border-muted);
+  padding: 0 12px;
+  background: var(--canvas-subtle);
+  font-size: 12px;
+  line-height: 1.5;
+  user-select: text;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 200ms ease, opacity 200ms ease, padding 200ms ease;
+}
+.fabric-deck.fabric-info-open .fabric-info {
+  max-height: 96px;
+  opacity: 1;
+  padding: 10px 12px;
+}
+.fabric-info header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primer-blueFg);
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.fabric-info button {
+  margin-left: auto;
+  min-width: 28px;
+  min-height: 28px;
+  border: 1px solid var(--border-control);
+  border-radius: 6px;
+  color: var(--fg);
+  background: transparent;
+  cursor: pointer;
+}
+.fabric-info button:hover {
+  background: var(--border-muted);
+}
+.fabric-info p {
+  line-height: 1.6;
+  max-height: 58px;
+  overflow: auto;
+  margin: 0;
+  color: var(--fg);
+}
+
+.fabric-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+.fabric-fallback[hidden] {
+  display: none;
+}
+/* Error state: hide the empty ribbon, show a readable panel. */
+.fabric-deck.fabric-error .fabric-stage {
+  height: 64px;
+  background: var(--canvas-subtle);
+}
+.fabric-deck.fabric-error .fabric-fallback {
+  color: var(--fg);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--canvas-subtle);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fabric-deck,
+  .fabric-stage,
+  .fabric-footer,
+  .fabric-info {
+    transition: none;
+  }
+}
+
+/* --- keyboard-shortcuts.css (ported) — help dialog + kbd-selected --- */
+.kbd-help-dialog {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--canvas);
+  color: var(--fg);
+  padding: 0;
+  max-width: 420px;
+  width: calc(100vw - 2rem);
+  max-height: min(80vh, 560px);
+  overflow-y: auto;
+  box-shadow: 0 24px 60px var(--panel-shadow);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.kbd-help-dialog::backdrop {
+  background: var(--modal-backdrop);
+}
+.kbd-help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--canvas);
+  z-index: 1;
+}
+.kbd-help-head strong {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.kbd-help-close {
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.kbd-help-close:hover {
+  color: var(--fg);
+  background: rgb(var(--fg-rgb) / 0.08);
+}
+.kbd-help-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.kbd-help-table td {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-muted);
+  vertical-align: top;
+}
+.kbd-help-table tr:last-child td {
+  border-bottom: none;
+}
+.kbd-help-table .kbd-keys {
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  color: var(--primer-blueFg);
+  white-space: nowrap;
+  width: 40%;
+  padding-top: 10px;
+}
+
+/* Highlight for the criterion selected via ↑/↓ or 1–9. */
+.kbd-selected {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Tone shares the waveform's 4%–96% horizontal time axis. */
+.tone-timeline { border-top: 1px solid var(--border); background: var(--canvas); padding: 6px 0 0; font-size: 11px; }
+.tone-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4%; }
+.tone-heading { font-size: 10px; font-weight: 600; letter-spacing: .09em; white-space: nowrap; }
+.tone-heading > span { letter-spacing: 0; font-weight: 400; color: var(--fg-muted); margin-left: 7px; }
+.tone-metrics { display: flex; padding: 2px; border: 1px solid var(--border); border-radius: 5px; background: var(--canvas-subtle); }
+.tone-metrics button { padding: 3px 7px; border-radius: 3px; color: var(--fg-muted); font-size: 10px; }
+.tone-metrics button[aria-pressed=true] { background: var(--canvas); color: var(--fg); box-shadow: 0 1px 3px #0002; font-weight: 600; }
+.tone-metrics button:focus-visible { outline: 2px solid var(--focus-ring); }
+.tone-lanes { margin: 0 4%; }
+.tone-lane-label { display: flex; align-items: center; gap: 5px; color: var(--fg-muted); font-size: 10px; margin: 5px 0 3px; }
+.tone-lane-label > span { margin-left: auto; font-variant-numeric: tabular-nums; }
+.tone-lane { position: relative; height: 25px; background: var(--canvas-inset); border-radius: 3px; cursor: crosshair; touch-action: pan-y; }
+.tone-lane:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.tone-area { width: 100%; height: 100%; overflow: visible; pointer-events: none; color: var(--primer-blueFg); }
+.tone-area-caller { color: var(--primer-caller); }
+.tone-area-fill { fill: currentColor; opacity: .22; }
+.tone-area-fill-active { opacity: .38; }
+.tone-area-line { fill: none; stroke: currentColor; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.tone-grid { fill: none; stroke: var(--border); stroke-width: .6; vector-effect: non-scaling-stroke; }
+.tone-missing { fill: none; stroke: var(--fg-subtle); stroke-dasharray: 2 4; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.tone-lane-label small { font-size: 9px; color: var(--fg-subtle); }
+.tone-cursor { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--fg); pointer-events: none; box-shadow: 0 0 0 1px var(--canvas); }
+.tone-ruler { display: flex; justify-content: space-between; color: var(--fg-subtle); margin-top: 4px; font-size: 9px; font-variant-numeric: tabular-nums; }
+.tone-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-height: 26px; padding: 4px 4%; margin-top: 4px; background: var(--canvas-subtle); border-top: 1px solid var(--border); color: var(--fg-muted); font-size: 10px; }
+.tone-readout-time { color: var(--fg); font-variant-numeric: tabular-nums; }
+.tone-readout-values { display: flex; gap: 9px; font-variant-numeric: tabular-nums; }
+.tone-readout-values b { color: var(--fg); font-weight: 500; }
+.tone-readout-values abbr { text-decoration: none; }
+.tone-hint { margin-left: auto; color: var(--fg-subtle); font-size: 9px; }
+.tone-empty { display: flex; gap: 10px; padding: 10px 4%; border-top: 1px solid var(--border); font-size: 11px; }
+.tone-empty span { color: var(--fg-muted); }
+.turn-sentiment { display: inline-flex; align-items: center; gap: 5px; margin: 7px 0 0; font-size: 10px; color: var(--fg-muted); }
+.turn-sentiment > i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+@media (max-width: 600px) { .tone-toolbar { flex-wrap: wrap; } .tone-hint { display: none; } .tone-heading > span { margin-left: 4px; } }
+
+.tone-collapse-toggle { display: inline-flex; align-items: center; min-height: 24px; cursor: pointer; }
+.tone-collapse-toggle:hover { color: var(--primer-blueFg); }
+.tone-collapse-toggle:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
+.tone-heading .tone-chevron { margin: 0 5px 0 0; color: var(--fg-muted); }
+.tone-metrics[hidden] { display: none; }
+.tone-collapsed { padding-bottom: 5px; }

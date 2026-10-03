@@ -1,0 +1,1558 @@
+{
+  "taxonomy": {
+    "categories": [
+      {
+        "category_id": "intent",
+        "builtin": true,
+        "name": "Caller objective",
+        "gloss": "Caller says what they want or why they called",
+        "description": null,
+        "speaker": "CALLER",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "check_stock_availability",
+            "name": "Check stock / availability",
+            "gloss": "Asks if an item is in stock",
+            "description": "Caller asks whether a specific item, size or color is currently available in store or online.",
+            "examples": [
+              "do you have this in stock"
+            ],
+            "fields": [
+              {
+                "field_id": "item_description",
+                "name": "Item description",
+                "type": "string",
+                "description": "Product name or description the caller is asking about.",
+                "pii_class": "product",
+                "enum_values": []
+              },
+              {
+                "field_id": "size",
+                "name": "Size",
+                "type": "string",
+                "description": "Size requested, letter or numeric.",
+                "pii_class": "none",
+                "enum_values": []
+              },
+              {
+                "field_id": "color",
+                "name": "Color",
+                "type": "string",
+                "description": "Color or variant requested.",
+                "pii_class": "none",
+                "enum_values": []
+              },
+              {
+                "field_id": "quantity_in_stock",
+                "name": "Quantity in stock",
+                "type": "number",
+                "description": "Units available as reported by the agent.",
+                "pii_class": "none",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "return_or_refund_inquiry",
+            "name": "Return / refund / exchange",
+            "gloss": "Asks about a return or refund",
+            "description": "Caller asks about, or requests, returning, exchanging or refunding an item, whether they already have it or are asking before buying.",
+            "examples": [
+              "I'd like to return this item"
+            ],
+            "fields": [
+              {
+                "field_id": "return_reason",
+                "name": "Return reason",
+                "type": "enum",
+                "description": "Stated reason for the return.",
+                "pii_class": "none",
+                "enum_values": [
+                  "Wrong size",
+                  "Doesn't fit",
+                  "Wrong item shipped",
+                  "Damaged or used",
+                  "Changed mind",
+                  "Other"
+                ]
+              },
+              {
+                "field_id": "return_window_days",
+                "name": "Return window (days)",
+                "type": "number",
+                "description": "Days allowed for return under the policy the agent quoted.",
+                "pii_class": "none",
+                "enum_values": []
+              },
+              {
+                "field_id": "refund_amount",
+                "name": "Refund amount",
+                "type": "amount",
+                "description": "Amount to be refunded or credited.",
+                "pii_class": "amount",
+                "enum_values": []
+              },
+              {
+                "field_id": "order_or_receipt_number",
+                "name": "Order or receipt number",
+                "type": "string",
+                "description": "Merchant order or receipt number used to look up the purchase.",
+                "pii_class": "none",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "shipping_delivery_question",
+            "name": "Shipping / delivery question",
+            "gloss": "Asks about shipping cost or timing",
+            "description": "Caller asks about shipping methods, cost or delivery timing.",
+            "examples": [
+              "how much is delivery"
+            ],
+            "fields": [
+              {
+                "field_id": "shipping_method",
+                "name": "Shipping method",
+                "type": "enum",
+                "description": "Shipping tier discussed or chosen.",
+                "pii_class": "none",
+                "enum_values": [
+                  "Standard",
+                  "Express",
+                  "Priority",
+                  "Next day",
+                  "Click and collect"
+                ]
+              },
+              {
+                "field_id": "shipping_cost",
+                "name": "Shipping cost",
+                "type": "amount",
+                "description": "Fee for the chosen shipping method.",
+                "pii_class": "amount",
+                "enum_values": []
+              },
+              {
+                "field_id": "delivery_window",
+                "name": "Delivery window",
+                "type": "string",
+                "description": "Estimated delivery time frame or date range.",
+                "pii_class": "none",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "price_or_promo_question",
+            "name": "Price, discount or promo question",
+            "gloss": "Asks about a discount or promo code",
+            "description": "Caller asks about discounts, promotions, promo codes or price matching.",
+            "examples": [
+              "can I use a discount code"
+            ],
+            "fields": [
+              {
+                "field_id": "discount_code",
+                "name": "Discount code",
+                "type": "string",
+                "description": "Promo code applied to the order.",
+                "pii_class": "none",
+                "enum_values": []
+              },
+              {
+                "field_id": "discount_percent_or_amount",
+                "name": "Discount size",
+                "type": "number",
+                "description": "Size of the discount granted, percent or amount.",
+                "pii_class": "none",
+                "enum_values": []
+              },
+              {
+                "field_id": "price_match_requested",
+                "name": "Price match requested",
+                "type": "boolean",
+                "description": "Whether the caller asked for a price match against a competitor.",
+                "pii_class": "none",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "order_placement_over_phone",
+            "name": "Place order over the phone",
+            "gloss": "Wants to place an order by phone",
+            "description": "Caller wants to place or finish a purchase during the call.",
+            "examples": [
+              "can I pay by card over the phone"
+            ],
+            "fields": [
+              {
+                "field_id": "payment_method",
+                "name": "Payment method",
+                "type": "enum",
+                "description": "How the caller pays.",
+                "pii_class": "none",
+                "enum_values": [
+                  "Credit card",
+                  "Debit card",
+                  "PayPal",
+                  "Buy now pay later",
+                  "Cash",
+                  "Store credit",
+                  "Loyalty points"
+                ]
+              },
+              {
+                "field_id": "order_total",
+                "name": "Order total",
+                "type": "amount",
+                "description": "Final charged total for the order.",
+                "pii_class": "amount",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "in_store_pickup_or_reservation",
+            "name": "In-store pickup / reservation",
+            "gloss": "Wants an item held for pickup",
+            "description": "Caller wants an item held, reserved or set up for click-and-collect or in-store pickup.",
+            "examples": [
+              "can you hold that for me"
+            ],
+            "fields": [
+              {
+                "field_id": "store_location",
+                "name": "Store location",
+                "type": "string",
+                "description": "Store or branch where the item is to be picked up.",
+                "pii_class": "organization",
+                "enum_values": []
+              },
+              {
+                "field_id": "hold_duration",
+                "name": "Hold duration",
+                "type": "string",
+                "description": "How long the reservation or hold is valid for.",
+                "pii_class": "none",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "product_sizing_or_fit_question",
+            "name": "Sizing / fit question",
+            "gloss": "Asks how an item fits or runs",
+            "description": "Caller asks how an item fits, runs, or which size to pick.",
+            "examples": [
+              "does this run small or large"
+            ],
+            "fields": [
+              {
+                "field_id": "fit_type",
+                "name": "Fit type",
+                "type": "enum",
+                "description": "How the item is described to fit.",
+                "pii_class": "none",
+                "enum_values": [
+                  "True to size",
+                  "Relaxed",
+                  "Slim",
+                  "Runs small",
+                  "Runs large"
+                ]
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "restock_or_release_date_question",
+            "name": "Restock / release date question",
+            "gloss": "Asks when an item restocks",
+            "description": "Caller asks when an out-of-stock or upcoming item will become available.",
+            "examples": [
+              "when will this be back in stock"
+            ],
+            "fields": [
+              {
+                "field_id": "restock_eta",
+                "name": "Restock ETA",
+                "type": "date",
+                "description": "Expected restock or release date.",
+                "pii_class": "date",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "loyalty_points_question",
+            "name": "Loyalty / rewards points question",
+            "gloss": "Asks about loyalty points",
+            "description": "Caller asks about earning, checking or redeeming loyalty or rewards points.",
+            "examples": [
+              "can I use my rewards points"
+            ],
+            "fields": [
+              {
+                "field_id": "points_redeemed_value",
+                "name": "Points redeemed value",
+                "type": "amount",
+                "description": "Dollar value of points applied to the purchase.",
+                "pii_class": "amount",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "CALLER"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\b(i'?m|i am) (looking|calling|hoping|trying|wondering|interested)\\b",
+              "\\bi('d| would) (like|love) to\\b",
+              "\\bi (want|wanted|need|needed) to\\b",
+              "\\b(can|could|do|does|would|will|is|are) (i|you|it|they|this|that|there)\\b.*\\?",
+              "\\bdo you (have|sell|carry|stock)\\b",
+              "\\bhow (much|long|do|does|can)\\b",
+              "\\bis (it|there) (possible|a way|any)\\b",
+              "\\bwhat('s| is) (your|the)\\b",
+              "\\bwhen (will|is|does|do)\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.2,
+          "threshold": 0.375,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "issue",
+        "builtin": true,
+        "name": "Reported issue",
+        "gloss": "Caller describes the problem, fee or dispute",
+        "description": null,
+        "speaker": "CALLER",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "wrong_size_or_item_received",
+            "name": "Wrong size / item received",
+            "gloss": "Received the wrong size or item",
+            "description": "Caller states they received the wrong size, color or item versus what was ordered.",
+            "examples": [
+              "I ordered a medium but got a large"
+            ],
+            "fields": [
+              {
+                "field_id": "expected_value",
+                "name": "Expected value",
+                "type": "string",
+                "description": "What the caller ordered.",
+                "pii_class": "none",
+                "enum_values": []
+              },
+              {
+                "field_id": "received_value",
+                "name": "Received value",
+                "type": "string",
+                "description": "What actually arrived.",
+                "pii_class": "none",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "item_doesnt_fit",
+            "name": "Item doesn't fit",
+            "gloss": "Item doesn't fit as expected",
+            "description": "Caller states a purchased item doesn't fit as expected, independent of a shipping error.",
+            "examples": [
+              "it doesn't fit me properly"
+            ],
+            "fields": [
+              {
+                "field_id": "fit_problem",
+                "name": "Fit problem",
+                "type": "enum",
+                "description": "Nature of the fit problem.",
+                "pii_class": "none",
+                "enum_values": [
+                  "Too big",
+                  "Too small",
+                  "Too tight",
+                  "Too loose"
+                ]
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "item_quality_defect",
+            "name": "Item quality / condition defect",
+            "gloss": "Item arrived damaged or worn",
+            "description": "Caller reports the item arrived damaged, worn or of lower quality than expected.",
+            "examples": [
+              "it looked used when it arrived"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "billing_or_charge_dispute",
+            "name": "Billing / charge dispute",
+            "gloss": "Disputes a charge or fee",
+            "description": "Caller disputes a charge, fee, or a refusal to refund.",
+            "examples": [
+              "I was charged a fee I don't agree with"
+            ],
+            "fields": [
+              {
+                "field_id": "disputed_amount",
+                "name": "Disputed amount",
+                "type": "amount",
+                "description": "Amount in dispute.",
+                "pii_class": "amount",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "lost_or_undelivered_parcel",
+            "name": "Lost / undelivered parcel",
+            "gloss": "Parcel never arrived",
+            "description": "Caller reports an expected delivery never arrived.",
+            "examples": [
+              "my parcel never showed up"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "suspicious_email_or_possible_scam",
+            "name": "Suspicious email / possible scam",
+            "gloss": "Reports a suspicious email",
+            "description": "Caller reports a promotional email or code that may be fraudulent.",
+            "examples": [
+              "this email looks like a scam"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "CALLER"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "position",
+                  "params": {
+                    "type": "call_position",
+                    "start_from": 0.0,
+                    "start_to": 0.25
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "lexicon",
+                  "params": {
+                    "type": "phrase"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\b(does ?n'?t|does not|did ?n'?t|did not|wo ?n'?t|is ?n'?t|not) (fit|work|working|arrive|arrived|come|show|showed|turn)\\b",
+              "\\btoo (big|small|large|tight|loose|long|short)\\b",
+              "\\b(wrong|damaged|broken|used|defect\\w*|faulty|ripped|stain\\w*|scratch\\w*|missing)\\b",
+              "\\b(charged|overcharged|fee|charge)\\b",
+              "\\b(lost|never (arrived|came|showed))\\b",
+              "\\b(scam|suspicious|spam|phishing|dodgy)\\b",
+              "\\b(return|send it back|ship it back|refund)\\b",
+              "\\bproblem\\b",
+              "\\bissue\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.5,
+          "threshold": 0.4,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "friction",
+        "builtin": true,
+        "name": "Friction point",
+        "gloss": "Caller describes an obstacle, repeat failure or frustration",
+        "description": null,
+        "speaker": "CALLER",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "cant_identify_correct_product",
+            "name": "Can't identify the correct product",
+            "gloss": "Trouble pinning down the product",
+            "description": "Caller and agent struggle over several turns to pin down exactly which product or stock number is meant.",
+            "examples": [
+              "I'm not sure which item that is"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "call_quality_or_connection_trouble",
+            "name": "Call quality / connection trouble",
+            "gloss": "Call quality or connection trouble",
+            "description": "Caller or agent notes the line is breaking up or one side can't hear the other.",
+            "examples": [
+              "can you hear me, the line is breaking up"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "no_printer_for_return_label",
+            "name": "No printer for return label",
+            "gloss": "Has no printer for a return label",
+            "description": "Caller states they lack a printer needed to complete a return.",
+            "examples": [
+              "I don't have a printer at home"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "agent_rudeness_or_dismissiveness",
+            "name": "Agent perceived as rude/dismissive",
+            "gloss": "Finds the agent rude or dismissive",
+            "description": "Caller states the agent is being rude, dismissive or condescending.",
+            "examples": [
+              "you're being quite rude"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "past_bad_experience_elsewhere",
+            "name": "Past bad experience at another retailer",
+            "gloss": "Had a bad experience elsewhere",
+            "description": "Caller references frustration from a previous purchase or return experience elsewhere.",
+            "examples": [
+              "another store gave me trouble before"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "extensive_search_before_calling",
+            "name": "Extensive prior search / effort",
+            "gloss": "Already searched extensively",
+            "description": "Caller describes having already spent significant time or effort trying to find the item.",
+            "examples": [
+              "I've been looking everywhere for this"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "CALLER"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "any",
+                "rule": null,
+                "children": [
+                  {
+                    "op": "rule",
+                    "rule": {
+                      "rule_id": "lexicon",
+                      "params": {
+                        "type": "phrase"
+                      }
+                    },
+                    "children": []
+                  },
+                  {
+                    "op": "rule",
+                    "rule": {
+                      "rule_id": "similar",
+                      "params": {
+                        "type": "similar_to_examples",
+                        "min_share": 0.1
+                      }
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\bcan you hear\\b",
+              "\\bhello\\s*\\?",
+              "\\b(line|call) (is )?(breaking|cut|cutting|dropped)\\b",
+              "\\bbreaking up\\b",
+              "\\bsorry,? hello\\b",
+              "\\bcut out\\b",
+              "\\b(don'?t|do not) have a printer\\b",
+              "\\bprinter\\b",
+              "\\b(looking|searching|driving) (everywhere|around|all day)\\b",
+              "\\bcould ?n'?t find\\b",
+              "\\bca ?n'?t find\\b",
+              "\\brude\\b",
+              "\\bdon'?t appreciate\\b",
+              "\\byou don'?t understand\\b",
+              "\\b(not sure|don'?t know|ca ?n'?t read|don'?t see) (which|what|the|a|how|why)\\b",
+              "\\b(other stores?|another store|elsewhere|last time)\\b",
+              "\\b(struggle|difficult|hard time|frustrat\\w*|annoy\\w*|ridiculous)\\b",
+              "\\bagain\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.5,
+          "threshold": 0.4,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "fix_proposed",
+        "builtin": true,
+        "name": "Proposed fix",
+        "gloss": "Agent proposes a fix or workaround",
+        "description": null,
+        "speaker": "AGENT",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "offer_replacement_item",
+            "name": "Offer replacement item",
+            "gloss": "Offers a replacement item",
+            "description": "Agent offers to send a replacement in the correct size, color or condition.",
+            "examples": [
+              "we can send a replacement"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "offer_refund_or_store_credit",
+            "name": "Offer refund / store credit",
+            "gloss": "Offers a refund or store credit",
+            "description": "Agent offers a refund, rebate or store credit as the resolution.",
+            "examples": [
+              "we can process a refund for you"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "offer_alternate_store_or_special_order",
+            "name": "Offer alternate store / special order",
+            "gloss": "Offers to source it elsewhere",
+            "description": "Agent offers to source the item from another location, ship it specially, or special-order it.",
+            "examples": [
+              "we can order that from another store"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "offer_discount_or_courtesy_credit",
+            "name": "Offer discount / courtesy credit",
+            "gloss": "Offers a discount or credit",
+            "description": "Agent offers a discount, voucher or goodwill credit for the caller's trouble.",
+            "examples": [
+              "we can offer you a discount for the trouble"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "offer_hold_or_reservation",
+            "name": "Offer hold / reservation",
+            "gloss": "Offers to hold the item",
+            "description": "Agent offers to hold or reserve stock or tickets for a limited time.",
+            "examples": [
+              "we can hold that for you"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "offer_price_match",
+            "name": "Offer price match",
+            "gloss": "Offers to match the price",
+            "description": "Agent agrees to try to match a competitor's price.",
+            "examples": [
+              "we can try to match that price"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "AGENT"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "lexicon",
+                  "params": {
+                    "type": "phrase"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\b(we|i)('ll| will| can| could| would| shall| am going to|'m going to|'m gonna| am gonna)( \\w+){0,3} (send|process|refund|credit|exchange|replace|reserve|hold|order|match|discount|waive|offer|ship|transfer|arrange|put|do|issue|get|source|call|try)\\b",
+              "\\bwhat (i|we) can do\\b",
+              "\\b(we|i)('re| are| am|'m) able to\\b",
+              "\\bhappy to\\b",
+              "\\bwould you (like|prefer)( \\w+){0,4} (refund|credit|exchange|replacement|store|hold|reserve|discount)\\b",
+              "\\bprice ?match\\b",
+              "\\bstore credit\\b",
+              "\\bwaive\\b",
+              "\\b(another|other) (store|shop|location|branch)\\b",
+              "\\bspecial (order|shipment)\\b",
+              "\\breplacement\\b"
+            ],
+            "negation_veto_words": 3
+          },
+          "lexicon_weight": 0.3,
+          "threshold": 0.4,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "agent_reports_completed",
+        "builtin": true,
+        "name": "Agent completed",
+        "gloss": "Agent reports that an action is done",
+        "description": null,
+        "speaker": "AGENT",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "order_or_payment_confirmed",
+            "name": "Order / payment confirmed",
+            "gloss": "Confirms order or payment done",
+            "description": "Agent reports the order was placed or payment processed successfully.",
+            "examples": [
+              "your payment has gone through"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "return_or_refund_initiated",
+            "name": "Return / refund initiated",
+            "gloss": "Confirms return or refund started",
+            "description": "Agent reports the return, label or refund process has been started or completed on their end.",
+            "examples": [
+              "I've started the refund on our end"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "reservation_or_hold_placed",
+            "name": "Reservation / hold placed",
+            "gloss": "Confirms item reserved or held",
+            "description": "Agent reports an item has been reserved, held or added to the caller's account.",
+            "examples": [
+              "that's reserved under your name"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "account_or_loyalty_updated",
+            "name": "Account / loyalty record updated",
+            "gloss": "Confirms account record updated",
+            "description": "Agent reports account, membership or loyalty details were created or updated.",
+            "examples": [
+              "I've added that to your account"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "AGENT"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "lexicon",
+                  "params": {
+                    "type": "phrase"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\b(i|we)('ve| have| just| did| already)( \\w+){0,2} (sent|added|processed|placed|entered|reserved|confirmed|done|initiated|issued|updated|booked|preordered|put|started|submitted|applied|cancelled|canceled|finished)\\b",
+              "\\b(has|have|had) been (\\w+ )?(sent|added|processed|placed|reserved|confirmed|done|initiated|issued|updated|booked|preordered|applied)\\b",
+              "\\b(that'?s|it'?s|that has|it has|payment has|order has) (been|gone|went)\\b",
+              "\\b(gone|went) through\\b",
+              "\\b(all set|successfully|it worked|done)\\b",
+              "\\breserved under\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.5,
+          "threshold": 0.4,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "caller_confirms_resolved",
+        "builtin": true,
+        "name": "Caller confirmed",
+        "gloss": "Caller confirms the problem is solved",
+        "description": null,
+        "speaker": "CALLER",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "satisfied_with_answer_or_purchase",
+            "name": "Satisfied with answer / purchase",
+            "gloss": "Satisfied with the outcome",
+            "description": "Caller expresses satisfaction and closes out the call positively.",
+            "examples": [
+              "that's all, thank you so much"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "explicit_confirmation_of_details",
+            "name": "Explicit confirmation of details",
+            "gloss": "Confirms the details are correct",
+            "description": "Caller explicitly confirms a specific detail, quote or plan is correct or acceptable.",
+            "examples": [
+              "yes, that all sounds good"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "CALLER"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "position",
+                  "params": {
+                    "type": "call_position",
+                    "start_from": 0.5,
+                    "start_to": 1.0
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "lexicon",
+                  "params": {
+                    "type": "phrase"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\b(that'?s|that is|sounds|it'?s|that would be|that'?d be|that will be|that'?ll be) (perfect|great|good|brilliant|fine|awesome|correct|lovely|wonderful|excellent|helpful|amazing)\\b",
+              "\\bthank(s| you)( \\w+){0,2} (so much|very much|for)\\b",
+              "\\b(that'?s|that is|that'?ll be|that will be) (all|it)\\b",
+              "\\b(yes|yeah|yep),? please\\b",
+              "\\bappreciate\\b",
+              "\\b(very )?helpful\\b",
+              "\\bhelped me\\b",
+              "\\bgo ahead\\b",
+              "\\bthat'?s correct\\b",
+              "\\bi'?ll take (it|that|them)\\b",
+              "\\bperfect\\b",
+              "\\bbrilliant\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.2,
+          "threshold": 0.4,
+          "check": "gemma",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "caller_reports_unresolved",
+        "builtin": true,
+        "name": "Still unresolved",
+        "gloss": "Caller says the problem persists",
+        "description": null,
+        "speaker": "CALLER",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "dispute_not_accepted",
+            "name": "Dispute not accepted by caller",
+            "gloss": "Rejects the agent's resolution",
+            "description": "Caller explicitly rejects the agent's position and states the matter is not settled.",
+            "examples": [
+              "I'll take this further, that's not right"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "CALLER"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "lexicon",
+                  "params": {
+                    "type": "phrase"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\btake (this|it) further\\b",
+              "\\bescalate\\b",
+              "\\bombudsman\\b",
+              "\\bnot (the law|right|fair|acceptable|good enough|going to fly)\\b",
+              "\\byou'?re wrong\\b",
+              "\\bdon'?t appreciate\\b",
+              "\\b(manager|supervisor|complain\\w*)\\b",
+              "\\bstill (not|doesn'?t|hasn'?t|no)\\b",
+              "\\bthat won'?t be happening\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.5,
+          "threshold": 0.4,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "deferred",
+        "builtin": true,
+        "name": "Deferred",
+        "gloss": "Agent defers work or promises a callback",
+        "description": null,
+        "speaker": "AGENT",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "followup_notification_promised",
+            "name": "Follow-up notification promised",
+            "gloss": "Promises a follow-up notice",
+            "description": "Agent promises a confirmation email, text or tracking update will follow later.",
+            "examples": [
+              "you'll get a confirmation email shortly"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "pending_supplier_restock_or_order",
+            "name": "Pending supplier restock / special order",
+            "gloss": "Item pending from a supplier",
+            "description": "Agent defers fulfillment because the item must come from a supplier or another location first.",
+            "examples": [
+              "that's on order from our supplier"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "escalate_to_colleague_or_manager",
+            "name": "Escalate to colleague / manager",
+            "gloss": "Escalates to a colleague",
+            "description": "Agent brings in, or refers to, another staff member for part of the request.",
+            "examples": [
+              "let me just get my manager"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "AGENT"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "position",
+                  "params": {
+                    "type": "call_position",
+                    "start_from": 0.25,
+                    "start_to": 1.0
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "lexicon",
+                  "params": {
+                    "type": "phrase"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\byou('ll| will| should| would)( \\w+){0,2} (get|receive|be getting|be receiving|see|have|hear)\\b",
+              "\\b(i|we|they)('ll| will) (send|email|notify|let you know|call|contact|text|reach out|be in touch)\\b",
+              "\\b(within|in|about|up to|takes?) (a |the )?(\\w+ )?(\\w+ )?(days|weeks|hours|business days|minutes)\\b",
+              "\\bonce (it|they|we|your|i)\\b",
+              "\\bwhen (it|they) (arrives?|ships?|comes?|gets?)\\b",
+              "\\b(supplier|next shipment|on order|back in stock|restock\\w*|pre-?order\\w*|warehouse)\\b",
+              "\\b(manager|supervisor|colleague|team|department)\\b",
+              "\\b(confirmation|notification|tracking|email|text message)\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.2,
+          "threshold": 0.35,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "upsell_attempt",
+        "builtin": false,
+        "name": "Upsell / cross-sell attempt",
+        "gloss": "Offers something beyond the ask",
+        "description": "Agent proactively offers an add-on item, membership, retention deal, or spending nudge beyond what the caller asked for.",
+        "speaker": "AGENT",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "addon_or_accessory_cross_sell",
+            "name": "Add-on / accessory cross-sell",
+            "gloss": "Offers an add-on accessory",
+            "description": "Agent offers a related add-on item, such as gift wrap, a case or a bundle, not requested by the caller.",
+            "examples": [
+              "would you like to add a case with that"
+            ],
+            "fields": [
+              {
+                "field_id": "addon_item",
+                "name": "Add-on item",
+                "type": "string",
+                "description": "The add-on item offered.",
+                "pii_class": "product",
+                "enum_values": []
+              },
+              {
+                "field_id": "addon_price",
+                "name": "Add-on price",
+                "type": "amount",
+                "description": "Price of the add-on.",
+                "pii_class": "amount",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "loyalty_or_membership_enrollment_pitch",
+            "name": "Loyalty / membership enrollment pitch",
+            "gloss": "Pitches loyalty signup",
+            "description": "Agent invites the caller to join a loyalty, rewards or VIP program.",
+            "examples": [
+              "would you like to join our rewards program"
+            ],
+            "fields": [
+              {
+                "field_id": "program_name",
+                "name": "Program name",
+                "type": "string",
+                "description": "Name of the loyalty or membership program pitched.",
+                "pii_class": "organization",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "retention_discount_offer",
+            "name": "Retention discount offer (cancel-save)",
+            "gloss": "Offers a discount to retain",
+            "description": "Agent offers a discounted continuation when the caller is trying to cancel.",
+            "examples": [
+              "we could offer a discounted rate instead"
+            ],
+            "fields": [
+              {
+                "field_id": "retention_offer_price",
+                "name": "Retention offer price",
+                "type": "amount",
+                "description": "Discounted price offered to retain the customer.",
+                "pii_class": "amount",
+                "enum_values": []
+              }
+            ],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "free_shipping_threshold_nudge",
+            "name": "Free-shipping threshold nudge",
+            "gloss": "Nudges toward free shipping",
+            "description": "Agent suggests adding items to reach a free-shipping spending threshold.",
+            "examples": [
+              "a bit more would qualify you for free shipping"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "AGENT"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "any",
+                "rule": null,
+                "children": [
+                  {
+                    "op": "rule",
+                    "rule": {
+                      "rule_id": "lexicon",
+                      "params": {
+                        "type": "phrase"
+                      }
+                    },
+                    "children": []
+                  },
+                  {
+                    "op": "rule",
+                    "rule": {
+                      "rule_id": "similar",
+                      "params": {
+                        "type": "similar_to_examples",
+                        "min_share": 0.1
+                      }
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\bwould you (like|be interested|want)( \\w+){0,3} (add|adding|join|joining|open|opening|sign|any|to add|to join|some|also)\\b",
+              "\\binterest you in\\b",
+              "\\b(loyalty|rewards?|membership|member|points) ?(card|scheme|program|programme|account|club)?\\b",
+              "\\b(while|since|whilst) i (have|'ve got|got) you\\b",
+              "\\baccessor\\w*\\b",
+              "\\bfree (shipping|delivery)\\b",
+              "\\bbundle\\b",
+              "\\b(also|other) (offers?|deals?|items|games)\\b",
+              "\\bcatalog\\w*\\b",
+              "\\bupgrade\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.3,
+          "threshold": 0.35,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      },
+      {
+        "category_id": "agent_conduct_concern",
+        "builtin": false,
+        "name": "Agent conduct concern",
+        "gloss": "Agent behaves unprofessionally",
+        "description": "Agent's tone or remarks depart from a professional register: over-familiar sales talk, jokes about sensitive data, or dismissiveness toward the caller. Experimental: seeded from 3 of 30 calls; monitor as more calls are scored.",
+        "speaker": "AGENT",
+        "examples": [],
+        "threshold": null,
+        "subcategory_threshold": null,
+        "subcategories": [
+          {
+            "subcategory_id": "overly_familiar_or_promotional_pitch",
+            "name": "Overly familiar / self-promotional pitch",
+            "gloss": "Overly familiar or self-promoting",
+            "description": "Agent brags about personal sales performance or makes personal remarks that overstep a professional register.",
+            "examples": [
+              "I'm actually the top rep in the store"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "joke_about_sensitive_data_collection",
+            "name": "Joke about sensitive data collection",
+            "gloss": "Jokes about collecting sensitive data",
+            "description": "Agent jokes while asking for account or payment details in a way that trivializes sensitive-data handling.",
+            "examples": [
+              "and your social security number, just kidding"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          },
+          {
+            "subcategory_id": "dismissive_or_skeptical_tone",
+            "name": "Dismissive or skeptical tone",
+            "gloss": "Dismissive or skeptical toward caller",
+            "description": "Agent's tone reads as dismissive of, or skeptical toward, what the caller is telling them.",
+            "examples": [
+              "that seems unlikely, doesn't it"
+            ],
+            "fields": [],
+            "narrow_quote": null,
+            "active": true
+          }
+        ],
+        "fields": [],
+        "narrow_quote": false,
+        "active": true,
+        "recipe": {
+          "engine": "rules",
+          "filter": {
+            "op": "all",
+            "rule": null,
+            "children": [
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "speaker",
+                  "params": {
+                    "type": "speaker",
+                    "speaker": "AGENT"
+                  }
+                },
+                "children": []
+              },
+              {
+                "op": "rule",
+                "rule": {
+                  "rule_id": "lexicon",
+                  "params": {
+                    "type": "phrase"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          "lexicon": {
+            "syntax": "regex",
+            "phrases": [
+              "\\b(just kidding|i'?m kidding|i joke|joking)\\b",
+              "\\b(number one|top (rep|performer|sales\\w*)|best (rep|sales\\w*))\\b",
+              "\\b(honey|girl|sweetie|darling|hun)\\b",
+              "\\bmy goodness\\b",
+              "\\bi hate\\b",
+              "\\bhonestly\\b",
+              "\\bfashion\\b",
+              "\\bi own\\b",
+              "\\bmyself\\b",
+              "\\bunlikely\\b",
+              "\\bdoes(n'?t| not) sound\\b",
+              "\\bnot happening\\b",
+              "\\bi have heard that\\b",
+              "\\breally hard\\b",
+              "\\byou need to\\b",
+              "\\bunlike\\b",
+              "\\bwhatever\\b",
+              "\\bapparently\\b",
+              "\\bsupposedly\\b",
+              "\\bto be fair\\b"
+            ],
+            "negation_veto_words": 0
+          },
+          "lexicon_weight": 0.5,
+          "threshold": 0.4,
+          "check": "none",
+          "origin": "pack:retail@1 (R2, recipes-tuned.json)"
+        }
+      }
+    ],
+    "rules": {
+      "bank": {
+        "bank_id": "retail-v1",
+        "digest": "sha256:4285a2b39bd8b878c431a87ef6a58c7d7526b5caf037f77cf6b75478e07389df"
+      },
+      "knn": {
+        "k": 10,
+        "temperature": 0.1,
+        "taxonomy_example_weight": 2.0
+      }
+    }
+  },
+  "expected_record_version": 1,
+  "notes": "Retail seed derived from 30 AppTek retail ground-truth transcripts (sample_audio/apptek_retail), read in full, text only. Adds retail subcategories to the 8 built-in categories and two custom categories (upsell_attempt, agent_conduct_concern). competitor_mention was evaluated and excluded for thin support (2/30 calls). All PII-forbidden extraction fields (card number, CVV, customer name, email, phone, mailing address, loyalty/account number) were dropped rather than seeded, per contract 1.3.0 section 5.2."
+}

@@ -1,0 +1,107 @@
+{
+  "asr": {
+    "repository": "mlx-community/parakeet-tdt-0.6b-v3",
+    "revision": "ed2b7e8c15f9aaa0b5772e2efb986255eaef7e15",
+    "directory": "parakeet-tdt-0.6b-v3",
+    "license": {
+      "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/text/CC-BY-4.0.txt",
+      "sha256": "d557539df68e771cc1eedcc91d13f70fca930e508d11eedcafa4b15db49e3744",
+      "filename": "LICENSE.CC-BY-4.0.txt"
+    },
+    "notice": "Parakeet TDT 0.6B v3 by NVIDIA (nvidia/parakeet-tdt-0.6b-v3), MLX conversion by MLX Community (mlx-community/parakeet-tdt-0.6b-v3). Licensed under CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/). Weights cast to bfloat16 at load time; not otherwise modified. Provided as is, without warranty."
+  },
+  "text": {
+    "repository": "mlx-community/gemma-4-e2b-it-4bit",
+    "revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+    "directory": "gemma-4-e2b-it",
+    "notice": "Gemma 4 E2B by Google, 4-bit MLX conversion by MLX Community. Apache-2.0. Upstream instruction-tuned weights; no Call1 fine-tuning in this release.",
+    "license": {
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "filename": "LICENSE.txt"
+    }
+  },
+  "tone": {
+    "repository": "MERaLiON/MERaLiON-SER-v1",
+    "revision": "7e3ee6fa4534dea8316e8ca43e377e2fbb58496b",
+    "directory": "meralion-ser-v1",
+    "ignore_patterns": [
+      "__pycache__/*",
+      "*.png",
+      "SG_*.pdf"
+    ],
+    "license_id": "meralion-public-license",
+    "notice": "Copyright 2025 AGENCY FOR SCIENCE TECHNOLOGY AND RESEARCH. MERaLiON Public Licence includes MIT grant and additional redistribution/derivative-work terms; retain accompanying MERaLiON-Public-Licence-SER-V1.pdf. Speech-only continuous valence/arousal/dominance in [0,1], plus seven emotion categories. Whisper-based, not WavLM. Requires call-domain validation."
+  },
+  "sentiment": {
+    "repository": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+    "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+    "directory": "roberta-sentiment",
+    "ignore_patterns": [
+      "tf_model.h5"
+    ],
+    "notice": "Cardiff NLP, TimeLMs / TweetEval, CC-BY-4.0. English negative/neutral/positive sentiment; trained on tweets, requires call-domain validation."
+  },
+  "storage": {
+    "version": "4.46",
+    "url": "https://github.com/seaweedfs/seaweedfs/releases/download/4.46/darwin_arm64.tar.gz",
+    "sha256": "1d26b6cd43a6ed4f8c315bac15a19334270e5c84505fbf7cc4fdb1e251a71bc5"
+  },
+  "diarization": {
+    "repository": "mlx-community/Nemotron-3-Diarization",
+    "revision": "59ed2dbfc1346dcea9d423c71306a3a2499c568f",
+    "directory": "nemotron-3-diarization",
+    "license": {
+      "url": "https://raw.githubusercontent.com/OpenMDW/OpenMDW/b26b32b34ad2edcc29a7707abb68dcfb25a538c1/1.1/LICENSE.OpenMDW-1.1",
+      "sha256": "2ab44b68365473c112f5092211a38f231cb23e50de68b75a13369adbd76a74df",
+      "filename": "LICENSE.OpenMDW-1.1"
+    },
+    "notice": "Nemotron-3-Diarization by NVIDIA (nvidia/Nemotron-3-Diarization), MLX conversion by MLX Community (mlx-community/Nemotron-3-Diarization). Licensed under the OpenMDW License Agreement, version 1.1; a copy is retained as LICENSE.OpenMDW-1.1 alongside the weights."
+  },
+  "embedding": {
+    "repository": "nvidia/Nemotron-3-Embed-1B-BF16",
+    "revision": "c0c9fea93ea424587517f2c59e20db9f1d6bf615",
+    "directory": "nemotron-3-embed-1b",
+    "license": {
+      "url": "https://huggingface.co/nvidia/Nemotron-3-Embed-1B-BF16/resolve/c0c9fea93ea424587517f2c59e20db9f1d6bf615/LICENSE",
+      "sha256": "5ae76a0d16eef67e28c81bfdb0b3c8687d14e9b57094090151e7541aac457ae9",
+      "filename": "LICENSE"
+    },
+    "notice": "Nemotron-3-Embed-1B-BF16 by NVIDIA Corporation, licensed under the OpenMDW License 1.1. Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. Derived from mistralai/Ministral-3-3B-Instruct-2512 (Apache-2.0); the repository's NOTICE and THIRD_PARTY_NOTICES.md ship beside the weights. Unmodified weights."
+  },
+  "privacy_filter": {
+    "repository": "openai/privacy-filter",
+    "revision": "7ffa9a043d54d1be65afb281eddf0ffbe629385b",
+    "directory": "openai-privacy-filter",
+    "allow_patterns": [
+      "model.safetensors",
+      "config.json",
+      "tokenizer.json",
+      "tokenizer_config.json",
+      "viterbi_calibration.json",
+      "README.md"
+    ],
+    "license": {
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "filename": "LICENSE.txt"
+    },
+    "notice": "OpenAI Privacy Filter by OpenAI (openai/privacy-filter). Licensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). Root bfloat16 safetensors, tokenizer and viterbi_calibration.json only (no onnx/ or original/); weights not modified. Provided as is, without warranty."
+  },
+  "asr_vocabulary": {
+    "repository": "mlx-community/whisper-small-mlx",
+    "revision": "45f3915923c7a79a5a5b5a7d909d39aeb0e5630e",
+    "directory": "whisper-small",
+    "tokenizer": {
+      "url": "https://raw.githubusercontent.com/openai/whisper/v20250625/whisper/assets/multilingual.tiktoken",
+      "sha256": "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126",
+      "filename": "multilingual.tiktoken"
+    },
+    "license": {
+      "url": "https://raw.githubusercontent.com/openai/whisper/v20250625/LICENSE",
+      "sha256": "b5d65a59060e68c4ff940e1eddfa6f94b2d68fdf58ed7f4dd57721c997e35e9d",
+      "filename": "LICENSE.whisper-MIT.txt"
+    },
+    "notice": "Whisper Small by OpenAI (openai/whisper), MIT License, Copyright (c) 2022 OpenAI; MLX conversion by MLX Community (mlx-community/whisper-small-mlx). The tokenizer vocabulary multilingual.tiktoken is bundled from openai/whisper v20250625 (MIT). Weights not modified. Used only as the vocabulary pass of dual transcription (docs/DualAsr.md), never as the transcript. Provided as is, without warranty."
+  }
+}

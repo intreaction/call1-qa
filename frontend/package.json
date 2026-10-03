@@ -1,0 +1,48 @@
+{
+  "name": "call1-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Call1 Process, Store and Evaluate",
+  "scripts": {
+    "dev": "vite --config vite.evaluate.config.ts",
+    "build": "npm run build:apps",
+    "preview": "vite preview --config vite.evaluate.config.ts",
+    "typecheck": "tsc -b",
+    "contracts:types": "openapi-typescript ../call1/contracts/openapi.json --alphabetize --export-type -o src/contracts/store-v1.ts",
+    "copy:store-static": "node scripts/copy-shared-static.mjs ../call1/store/static",
+    "copy:process-static": "node scripts/copy-shared-static.mjs ../call1/process/static",
+    "dev:evaluate": "vite --config vite.evaluate.config.ts",
+    "build:evaluate": "tsc -b && npm run copy:store-static && vite build --config vite.evaluate.config.ts",
+    "build:store-console": "tsc -b && npm run copy:store-static && vite build --config vite.store-console.config.ts",
+    "build:process": "tsc -b && npm run copy:process-static && node scripts/clean-app-assets.mjs ../call1/process/static/assets process && vite build --config vite.process.config.ts",
+    "build:apps": "npm run build:evaluate && npm run build:store-console && npm run build:process",
+    "test:e2e": "playwright test",
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json"
+  },
+  "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@tanstack/react-query": "^5.59.0",
+    "@types/three": "^0.185.4",
+    "lucide-react": "^0.453.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-is": "^18.3.1",
+    "recharts": "^3.10.1",
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.5.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "openapi-typescript": "7.13.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8"
+  }
+}

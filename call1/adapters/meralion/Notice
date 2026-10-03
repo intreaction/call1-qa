@@ -1,0 +1,7 @@
+MERaLiON-SER-v1 downstream network, adapted for offline inference.
+Copyright 2025 AGENCY FOR SCIENCE TECHNOLOGY AND RESEARCH.
+Source: MERaLiON/MERaLiON-SER-v1 @ 7e3ee6fa4534dea8316e8ca43e377e2fbb58496b.
+Modifications: removed training imports and unused decoder; local config and strict weights.
+See LICENSE.pdf and Notice in this directory for the full public license.
+
+Whisper encoder config: openai/whisper-medium @ abdf7c39ab9d0397620ccaea8974cc764cd0953e (MIT).

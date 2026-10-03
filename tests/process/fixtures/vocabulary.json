@@ -1,0 +1,587 @@
+{
+ "note": "Simulated retailer catalogue for the dual-ASR merge experiment. Derived from the reference transcripts of all 30 AppTek retail calls (capitalised non-sentence-initial spans, no digits, then hand-reviewed in build_vocab.py: people's names, home towns, dates and fragments removed; a few lower-case brand and service terms added). Because it comes from the same corpus it simulates a known catalogue: every term is guaranteed to occur, which a real catalogue would not guarantee.",
+ "terms": [
+  {
+   "term": "Converse",
+   "category": "proper",
+   "ref_count": 15,
+   "ref_calls": 2
+  },
+  {
+   "term": "Chuck Taylor All Star",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 2
+  },
+  {
+   "term": "Nike",
+   "category": "proper",
+   "ref_count": 5,
+   "ref_calls": 1
+  },
+  {
+   "term": "Jordans",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Reebok",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "iPhone",
+   "category": "proper",
+   "ref_count": 11,
+   "ref_calls": 2
+  },
+  {
+   "term": "iPhone Pro Max",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Samsung",
+   "category": "proper",
+   "ref_count": 3,
+   "ref_calls": 1
+  },
+  {
+   "term": "Nintendo",
+   "category": "proper",
+   "ref_count": 7,
+   "ref_calls": 1
+  },
+  {
+   "term": "Nintendo Switch",
+   "category": "proper",
+   "ref_count": 5,
+   "ref_calls": 1
+  },
+  {
+   "term": "Mario Kart",
+   "category": "proper",
+   "ref_count": 7,
+   "ref_calls": 1
+  },
+  {
+   "term": "Mario Kart World",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "EA Sports FC",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Hogwarts Legacy",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Harry Potter",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Animal Crossing",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Pokemon Legends Arceus",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Super Mario Party Jamboree",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Zelda",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Echoes of Wisdom",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Bravely Default",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Stanley cup",
+   "category": "proper",
+   "ref_count": 5,
+   "ref_calls": 1
+  },
+  {
+   "term": "Jack Frost",
+   "category": "proper",
+   "ref_count": 6,
+   "ref_calls": 1
+  },
+  {
+   "term": "Aurora windbreaker",
+   "category": "proper",
+   "ref_count": 4,
+   "ref_calls": 1
+  },
+  {
+   "term": "Kirkland",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Stouffer's",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Ocean Spray",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Marie Callender's",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Canada Goose",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Starlink",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Coldplay",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Duke Blue Devils",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Rio collection",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Ticketek",
+   "category": "proper",
+   "ref_count": 13,
+   "ref_calls": 1
+  },
+  {
+   "term": "Herald Sun",
+   "category": "proper",
+   "ref_count": 6,
+   "ref_calls": 1
+  },
+  {
+   "term": "News Corp",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Best Buy",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Currys PC World",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Mountain Equipment",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "CrossIron Mills",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Chadstone",
+   "category": "proper",
+   "ref_count": 4,
+   "ref_calls": 1
+  },
+  {
+   "term": "Blanchardstown",
+   "category": "proper",
+   "ref_count": 5,
+   "ref_calls": 1
+  },
+  {
+   "term": "Liffey Valley",
+   "category": "proper",
+   "ref_count": 7,
+   "ref_calls": 1
+  },
+  {
+   "term": "Stillorgan",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Airside",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Prahran Arcade",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Suit Haberdashery",
+   "category": "proper",
+   "ref_count": 3,
+   "ref_calls": 1
+  },
+  {
+   "term": "Style House",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Trend Star Retail",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Trend Line Apparel",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Luxy Wear",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Tops and Bottoms For You",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Lucinda's Boutique",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Brightmark",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Radio City",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Pennies",
+   "category": "proper",
+   "ref_count": 4,
+   "ref_calls": 1
+  },
+  {
+   "term": "Stop Shop Retail",
+   "category": "proper",
+   "ref_count": 3,
+   "ref_calls": 1
+  },
+  {
+   "term": "Luna and Co",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Michael's",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Ticketek VIP",
+   "category": "proper",
+   "ref_count": 3,
+   "ref_calls": 1
+  },
+  {
+   "term": "Plus Rewards",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Winter Wonderland Bonanza",
+   "category": "proper",
+   "ref_count": 3,
+   "ref_calls": 1
+  },
+  {
+   "term": "Black Friday",
+   "category": "proper",
+   "ref_count": 8,
+   "ref_calls": 2
+  },
+  {
+   "term": "Cyber Monday",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "March Madness",
+   "category": "proper",
+   "ref_count": 3,
+   "ref_calls": 1
+  },
+  {
+   "term": "Visa",
+   "category": "proper",
+   "ref_count": 4,
+   "ref_calls": 2
+  },
+  {
+   "term": "Mastercard",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "American Express",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "PayPal",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Afterpay",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "Klarna",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "DHL",
+   "category": "proper",
+   "ref_count": 4,
+   "ref_calls": 2
+  },
+  {
+   "term": "Canada Post",
+   "category": "proper",
+   "ref_count": 5,
+   "ref_calls": 1
+  },
+  {
+   "term": "Australia Post",
+   "category": "proper",
+   "ref_count": 6,
+   "ref_calls": 2
+  },
+  {
+   "term": "AusPost",
+   "category": "proper",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "StarTrack",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "Gmail",
+   "category": "proper",
+   "ref_count": 10,
+   "ref_calls": 6
+  },
+  {
+   "term": "Wi-Fi",
+   "category": "proper",
+   "ref_count": 10,
+   "ref_calls": 1
+  },
+  {
+   "term": "FaceTime",
+   "category": "proper",
+   "ref_count": 2,
+   "ref_calls": 1
+  },
+  {
+   "term": "QR code",
+   "category": "proper",
+   "ref_count": 4,
+   "ref_calls": 2
+  },
+  {
+   "term": "click and collect",
+   "category": "service",
+   "ref_count": 5,
+   "ref_calls": 2
+  },
+  {
+   "term": "price match",
+   "category": "service",
+   "ref_count": 4,
+   "ref_calls": 2
+  },
+  {
+   "term": "store credit",
+   "category": "service",
+   "ref_count": 3,
+   "ref_calls": 3
+  },
+  {
+   "term": "loyalty points",
+   "category": "service",
+   "ref_count": 11,
+   "ref_calls": 4
+  },
+  {
+   "term": "loyalty card",
+   "category": "service",
+   "ref_count": 2,
+   "ref_calls": 2
+  },
+  {
+   "term": "express shipping",
+   "category": "service",
+   "ref_count": 7,
+   "ref_calls": 4
+  },
+  {
+   "term": "free shipping",
+   "category": "service",
+   "ref_count": 2,
+   "ref_calls": 2
+  },
+  {
+   "term": "standard delivery",
+   "category": "service",
+   "ref_count": 3,
+   "ref_calls": 3
+  },
+  {
+   "term": "tracking number",
+   "category": "service",
+   "ref_count": 8,
+   "ref_calls": 5
+  },
+  {
+   "term": "order number",
+   "category": "service",
+   "ref_count": 7,
+   "ref_calls": 3
+  },
+  {
+   "term": "promo code",
+   "category": "service",
+   "ref_count": 1,
+   "ref_calls": 1
+  },
+  {
+   "term": "discount code",
+   "category": "service",
+   "ref_count": 5,
+   "ref_calls": 1
+  },
+  {
+   "term": "return label",
+   "category": "service",
+   "ref_count": 4,
+   "ref_calls": 2
+  },
+  {
+   "term": "pre-order",
+   "category": "service",
+   "ref_count": 17,
+   "ref_calls": 5
+  },
+  {
+   "term": "restock",
+   "category": "service",
+   "ref_count": 2,
+   "ref_calls": 2
+  },
+  {
+   "term": "clearance",
+   "category": "service",
+   "ref_count": 8,
+   "ref_calls": 3
+  },
+  {
+   "term": "VIP",
+   "category": "service",
+   "ref_count": 8,
+   "ref_calls": 2
+  }
+ ]
+}

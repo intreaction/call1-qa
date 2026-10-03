@@ -1,0 +1,18 @@
+title = "Call1 credential scanning"
+
+[extend]
+useDefault = true
+
+# Keep the upstream rules; also detect the application's own credential formats.
+# Do not allowlist entire test directories: accidental real credentials can land there.
+[[rules]]
+id = "call1-service-key"
+description = "Call1 Store service key"
+regex = '''c1sk_[A-Za-z0-9]{6}_[A-Za-z0-9_-]{43,}'''
+keywords = ["c1sk_"]
+
+[[rules]]
+id = "call1-console-token"
+description = "Call1 Process console token"
+regex = '''c1con_[A-Za-z0-9_-]{32,}'''
+keywords = ["c1con_"]

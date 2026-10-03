@@ -1,0 +1,296 @@
+{
+  "call_01_compliant": {
+    "call_id": "call_01_compliant",
+    "file_name": "call_01_compliant.wav",
+    "duration_seconds": 44.01,
+    "channels": 2,
+    "turns": [
+      {
+        "turn_id": 0,
+        "speaker": "AGENT",
+        "start_time": 0.0,
+        "end_time": 6.67,
+        "text": "Thank you for calling Apex Financial. This call is recorded for quality and compliance. My name is Samantha.",
+        "channel": 0
+      },
+      {
+        "turn_id": 1,
+        "speaker": "CALLER",
+        "start_time": 6.97,
+        "end_time": 11.16,
+        "text": "Hi Samantha, I'd like to check on my recent deposit status.",
+        "channel": 1
+      },
+      {
+        "turn_id": 2,
+        "speaker": "AGENT",
+        "start_time": 11.46,
+        "end_time": 18.11,
+        "text": "I would be happy to help you with that. Before we proceed, could you please verify your account number and date of birth?",
+        "channel": 0
+      },
+      {
+        "turn_id": 3,
+        "speaker": "CALLER",
+        "start_time": 18.41,
+        "end_time": 27.84,
+        "text": "Yes, my account number is 884-210-993, and my date of birth is May 12th, 1984.",
+        "channel": 1
+      },
+      {
+        "turn_id": 4,
+        "speaker": "AGENT",
+        "start_time": 28.14,
+        "end_time": 33.99,
+        "text": "Thank you for verifying Mr. Miller. Your deposit of $2,500 cleared this morning.",
+        "channel": 0
+      },
+      {
+        "turn_id": 5,
+        "speaker": "CALLER",
+        "start_time": 34.29,
+        "end_time": 36.68,
+        "text": "Great, that is all I needed to know.",
+        "channel": 1
+      },
+      {
+        "turn_id": 6,
+        "speaker": "AGENT",
+        "start_time": 36.98,
+        "end_time": 43.71,
+        "text": "Is there anything else I can assist you with today? Thank you for banking with Apex Financial, and have a wonderful day!",
+        "channel": 0
+      }
+    ],
+    "ground_truth": {
+      "overall_score": 100.0,
+      "passed": true,
+      "critical_failure": false,
+      "requires_human_review": false,
+      "expected_verdicts": {
+        "REG-01": "PASS",
+        "SEC-01": "PASS",
+        "ETIQ-01": "PASS"
+      }
+    }
+  },
+  "call_02_critical_breach": {
+    "call_id": "call_02_critical_breach",
+    "file_name": "call_02_critical_breach.wav",
+    "duration_seconds": 21.06,
+    "channels": 2,
+    "turns": [
+      {
+        "turn_id": 0,
+        "speaker": "AGENT",
+        "start_time": 0.0,
+        "end_time": 3.02,
+        "text": "Apex Financial. How can I help you today?",
+        "channel": 0
+      },
+      {
+        "turn_id": 1,
+        "speaker": "CALLER",
+        "start_time": 3.32,
+        "end_time": 7.61,
+        "text": "Hi, I need to know how much money is left in my savings account.",
+        "channel": 1
+      },
+      {
+        "turn_id": 2,
+        "speaker": "AGENT",
+        "start_time": 7.91,
+        "end_time": 9.79,
+        "text": "Sure thing, what is your name?",
+        "channel": 0
+      },
+      {
+        "turn_id": 3,
+        "speaker": "CALLER",
+        "start_time": 10.09,
+        "end_time": 11.1,
+        "text": "Daniel Miller.",
+        "channel": 1
+      },
+      {
+        "turn_id": 4,
+        "speaker": "AGENT",
+        "start_time": 11.4,
+        "end_time": 17.25,
+        "text": "Alright Daniel, you have got $14,250 in your savings account.",
+        "channel": 0
+      },
+      {
+        "turn_id": 5,
+        "speaker": "CALLER",
+        "start_time": 17.55,
+        "end_time": 19.31,
+        "text": "Great, thanks a lot.",
+        "channel": 1
+      },
+      {
+        "turn_id": 6,
+        "speaker": "AGENT",
+        "start_time": 19.61,
+        "end_time": 20.76,
+        "text": "Yep, bye.",
+        "channel": 0
+      }
+    ],
+    "ground_truth": {
+      "overall_score": 25.0,
+      "passed": false,
+      "critical_failure": true,
+      "requires_human_review": true,
+      "expected_verdicts": {
+        "REG-01": "FAIL",
+        "SEC-01": "FAIL",
+        "ETIQ-01": "FAIL"
+      }
+    }
+  },
+  "call_03_dispute_escalation": {
+    "call_id": "call_03_dispute_escalation",
+    "file_name": "call_03_dispute_escalation.wav",
+    "duration_seconds": 39.77,
+    "channels": 2,
+    "turns": [
+      {
+        "turn_id": 0,
+        "speaker": "AGENT",
+        "start_time": 0.0,
+        "end_time": 6.53,
+        "text": "Hello, Apex Financial customer service, this is Samantha. Note this call might be on tape or whatever.",
+        "channel": 0
+      },
+      {
+        "turn_id": 1,
+        "speaker": "CALLER",
+        "start_time": 6.83,
+        "end_time": 12.87,
+        "text": "Someone charged $1,200 to my card in Florida and I want this money back right now!",
+        "channel": 1
+      },
+      {
+        "turn_id": 2,
+        "speaker": "AGENT",
+        "start_time": 13.17,
+        "end_time": 19.23,
+        "text": "I understand your frustration sir. Let me verify you first with your account number and security PIN.",
+        "channel": 0
+      },
+      {
+        "turn_id": 3,
+        "speaker": "CALLER",
+        "start_time": 19.53,
+        "end_time": 26.88,
+        "text": "Account number is 902-114-883, PIN is 4492.",
+        "channel": 1
+      },
+      {
+        "turn_id": 4,
+        "speaker": "AGENT",
+        "start_time": 27.18,
+        "end_time": 32.27,
+        "text": "Thank you. I am putting a freeze on that card now and escalating this to our fraud division.",
+        "channel": 0
+      },
+      {
+        "turn_id": 5,
+        "speaker": "CALLER",
+        "start_time": 32.57,
+        "end_time": 35.02,
+        "text": "Please make sure this is refunded quickly.",
+        "channel": 1
+      },
+      {
+        "turn_id": 6,
+        "speaker": "AGENT",
+        "start_time": 35.32,
+        "end_time": 39.47,
+        "text": "I will note that in the ticket. Is there anything else I can help you with today?",
+        "channel": 0
+      }
+    ],
+    "ground_truth": {
+      "overall_score": 75.0,
+      "passed": false,
+      "critical_failure": false,
+      "requires_human_review": true,
+      "expected_verdicts": {
+        "REG-01": "FLAGGED",
+        "SEC-01": "PASS",
+        "ETIQ-01": "PASS"
+      }
+    }
+  },
+  "call_04_dropped_too_short": {
+    "call_id": "call_04_dropped_too_short",
+    "file_name": "call_04_dropped_too_short.wav",
+    "duration_seconds": 2.13,
+    "channels": 1,
+    "ground_truth": {
+      "is_valid": false,
+      "status": "DISCARD_TOO_SHORT"
+    }
+  },
+  "call_05_pii_heavy": {
+    "call_id": "call_05_pii_heavy",
+    "file_name": "call_05_pii_heavy.wav",
+    "duration_seconds": 35.51,
+    "channels": 2,
+    "turns": [
+      {
+        "turn_id": 0,
+        "speaker": "AGENT",
+        "start_time": 0.0,
+        "end_time": 5.2,
+        "text": "Thank you for calling Apex Financial. This call is recorded. My name is Samantha.",
+        "channel": 0
+      },
+      {
+        "turn_id": 1,
+        "speaker": "CALLER",
+        "start_time": 5.5,
+        "end_time": 17.05,
+        "text": "Hi Samantha, my social security number is 442-89-1099 and my phone number is 480-555-0199.",
+        "channel": 1
+      },
+      {
+        "turn_id": 2,
+        "speaker": "AGENT",
+        "start_time": 17.35,
+        "end_time": 22.63,
+        "text": "Thank you for providing that. Could you also state the sixteen digit card number on file?",
+        "channel": 0
+      },
+      {
+        "turn_id": 3,
+        "speaker": "CALLER",
+        "start_time": 22.93,
+        "end_time": 29.76,
+        "text": "Yes, it is 4111-2222-3333-4444.",
+        "channel": 1
+      },
+      {
+        "turn_id": 4,
+        "speaker": "AGENT",
+        "start_time": 30.06,
+        "end_time": 35.2,
+        "text": "Thank you. Your request is submitted. Is there anything else today? Have a good day!",
+        "channel": 0
+      }
+    ],
+    "ground_truth": {
+      "overall_score": 100.0,
+      "passed": true,
+      "critical_failure": false,
+      "requires_human_review": false,
+      "pii_entities_expected": [
+        "442-89-1099",
+        "480-555-0199",
+        "4111-2222-3333-4444"
+      ]
+    }
+  }
+}

@@ -1,0 +1,63 @@
+.DS_Store
+.env
+.env.local
+.env.*
+!.env.example
+node_modules/
+node_modules
+.omp/
+.playwright-cli/
+:memory:.ses
+*.tsbuildinfo
+*.bak
+output/
+.chart-build/
+.chart-data-*/
+.deck-build/
+__pycache__/
+*.pyc
+.venv
+.venv/
+.venv-local/
+.playwright-mcp/
+venv
+venv/
+.ipynb_checkpoints/
+dist/
+build/
+*.db
+*.db-wal
+*.db-shm
+data/
+bin/
+
+# iCloud Drive conflict copies ("name 2.ext")
+* [0-9].*
+* [0-9]
+
+# Local-only
+screenshots/
+.claude/launch.json
+
+# AppTek retail evaluation set: audio is local only (555 MB); README and manifests are tracked
+sample_audio/apptek_retail/audio/
+
+# Publication hygiene. These patterns do not remove files already tracked in Git.
+deck-studio/
+.secrets/
+.session/
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+
+# Private course sources and audio pending removal from the published history.
+docs/course/*
+!docs/course/README.md
+sample_audio/huggingface/
+sample_audio/call_0*.wav
+
+# Generated non-speech test fixtures
+sample_audio/.test-audio.json

@@ -1,0 +1,92 @@
+{
+  "source": "https://huggingface.co/datasets/apptek-com/apptek_callcenter_dialogues",
+  "source_card_checked": "2026-09-11",
+  "license_as_listed": "cc-by-sa-4.0",
+  "configuration": "diarization",
+  "sample_type": "role-played human conversations",
+  "local_upstream_revision": null,
+  "revision_note": "The original download did not record a repository revision. Local hashes freeze the exact validation files; do not infer an upstream revision from the current dataset head.",
+  "manifest_sha256": "83c25c000a5e2def1f12295d2fb6033cfdeae63d8aa8e2be92c1554579a363ab",
+  "samples": [
+    {
+      "sample_id": "en_US_General_Banking_1586157",
+      "file_name": "en_US_General_Banking_1586157.wav",
+      "sha256": "3b9bcfc05d060f7ca67f71039946cd81eb97ecad51c6ff1545fbe85dd4966061",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Banking_1586678",
+      "file_name": "en_US_General_Banking_1586678.wav",
+      "sha256": "6d185f1e7b682260f322fd01c3b63adedbf70683e76ed5fb19d1e640e4cbe516",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Finance_1584557",
+      "file_name": "en_US_General_Finance_1584557.wav",
+      "sha256": "b558f7dafd997da9a450f47c8b40db186b8ff0bd2837177ce53e39cf2509ce1b",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Finance_1586721",
+      "file_name": "en_US_General_Finance_1586721.wav",
+      "sha256": "8abd82bd091bd60b9ba114f793d17968b54bdfbd5a6738a80e493e87998775f7",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Insurance_1586742",
+      "file_name": "en_US_General_Insurance_1586742.wav",
+      "sha256": "8bb174996233666a6008b5969b8d2dcb6ce7d952fc41891fe8e40d72bdd1ebcf",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Insurance_1586895",
+      "file_name": "en_US_General_Insurance_1586895.wav",
+      "sha256": "d0a1c07c502f47f9fde3ca1ae10c5eb6f79c839b47dadc84f26681d57a806595",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Retail_1586749",
+      "file_name": "en_US_General_Retail_1586749.wav",
+      "sha256": "2fec53ee8da67e587206840197618894c23cb62093f84b019d79cb297a70c359",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Technology_1586750",
+      "file_name": "en_US_General_Technology_1586750.wav",
+      "sha256": "e62d05d31ac3fb11b2985aa78d97f316b065157d069e7349a2cc9c209e8bf98e",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Telecom_1586751",
+      "file_name": "en_US_General_Telecom_1586751.wav",
+      "sha256": "be65980a5359627e635bbdb18300afc0fd5f727628b9e83f3d97e56faf5e247d",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    },
+    {
+      "sample_id": "en_US_General_Telecom_1586891",
+      "file_name": "en_US_General_Telecom_1586891.wav",
+      "sha256": "d585331df3e9573fc4188172366bb168c1e66a0b88c3016ff9e597736c352162",
+      "language": "English",
+      "accent": "en-US_General",
+      "split_usage": "known development/validation example"
+    }
+  ]
+}

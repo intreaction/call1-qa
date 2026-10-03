@@ -1,6 +1,6 @@
 # Development
 
-Use Python 3.12, Node.js 22+ for frontend work, and FFmpeg on PATH. Install `requirements.txt` (or `requirements-mlx.txt` for Apple Silicon inference) and `requirements-dev.txt` into a virtual environment.
+Use Python 3.12, Node.js 22.12+ for frontend work, and FFmpeg on PATH. Install `requirements.txt` (or `requirements-mlx.txt` for Apple Silicon inference) and `requirements-dev.txt` into a virtual environment.
 
 ## Frontend
 
@@ -55,3 +55,7 @@ Real-model tests are opt-in with `CALL1_REAL_MODELS=1`, require appropriate weig
 `npm run contracts:types` in `frontend/` regenerates Store client types from the checked-in OpenAPI contract. Keep API changes synchronized with the Python contracts and client types.
 
 Run Gitleaks with `.gitleaks.toml` against the exact source tree and full publication history. Its Call1-specific rules supplement the default secret rules. Review findings individually; do not allowlist whole test directories. Public source history must not contain excluded private files or recordings.
+
+## Dependency audit scope
+
+CI rejects moderate or higher advisories in frontend runtime dependencies (`npm audit --omit=dev`). The October 2, 2026 sweep found none after updating Vite and its React plugin. A full development-dependency audit still reports the Tailwind 3 glob/watcher chain (braces stack-exhaustion advisory); the registry offers no compatible patched braces release. Those packages run during development/builds, not in the served application. Moving to Tailwind 4 is a separate stylesheet migration; do not supply untrusted glob patterns to build tooling.

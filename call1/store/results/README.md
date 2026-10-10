@@ -59,6 +59,14 @@ matching from the next QA version on.
 
 ## Reviews and the review queue
 
+Current-version verdict overrides recompute the call-list score and rubric metrics against the
+immutable published rubric. `CallReviewState.reviewed_score` provides that score to Evaluate; the
+original evaluation artifact and machine verdicts remain unchanged. The latest override per
+criterion wins. FLAGGED checks remain pending and are excluded from assessed weight; FAIL earns
+zero points. A new evaluation resets the projection to the new machine score and makes older
+review decisions stale, so they cannot change its score. Review-agreement metrics still compare
+original machine verdicts with reviewer outcomes.
+
 - **Version checks.** Every review write checks the call's `review_version`. A mismatch is 409
   `review_version_conflict` with `current_version`. A write that judges the machine result must name
   the current evaluation version, or it gets 409 `conflict` with `current_evaluation_version`.
@@ -167,7 +175,7 @@ open core and unscored: nothing here touches a scorecard, `overall_score` or the
 **The taxonomy** (`signal_store.py`, tables `results_signal_taxonomy` and
 `results_signal_taxonomy_versions`) is one document, versioned whole. `042_signals.sql` seeds version 1
 with the eight built-ins only (`signals.builtin_signal_taxonomy()`), `record_version` 1 and the default
-settings (`pipeline: v1`). `saveSignalTaxonomy` returns the record unchanged when the digest equals
+settings (`pipeline: v2`, `v1_fallback: false`). `saveSignalTaxonomy` returns the record unchanged when the digest equals
 the current version's, otherwise publishes N+1. Its save validator refuses, with `validation_failed`
 and `details.field` naming the path (never the value):
 

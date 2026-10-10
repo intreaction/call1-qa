@@ -23,6 +23,7 @@ from call1.contracts.reviews import (
     ReviewHistoryKind,
     ReviewStaleness,
     ReviewWriteResult,
+    ReviewedScore,
     VerdictOverrideRecord,
 )
 from call1.contracts.contents import VerdictStatus
@@ -98,7 +99,7 @@ def review_state(conn: StoreConnection, call_id: str) -> Optional[CallReviewStat
     overrides: List[VerdictOverrideRecord] = []
     if reviewed is not None:
         overrides = [_override(r) for r in conn.execute(
-            "SELECT * FROM results_verdict_overrides WHERE call_id = ? AND evaluation_version = ? ORDER BY created_at, id",
+            "SELECT * FROM results_verdict_overrides WHERE call_id = ? AND evaluation_version = ? ORDER BY review_version",
             (call_id, reviewed)).fetchall()]
     return CallReviewState(
         call_id=call_id,
@@ -111,10 +112,48 @@ def review_state(conn: StoreConnection, call_id: str) -> Optional[CallReviewStat
         escalation_resolved_at=db.parse_ts(row["escalation_resolved_at"]),
         reviewer_notes=row["reviewer_notes"],
         overrides=overrides,
+        reviewed_score=reviewed_score(conn, call_id),
         retained_by_account_id=row["retained_by"],
         retained_at=db.parse_ts(row["retained_at"]),
         updated_at=db.parse_ts(row["updated_at"]),
     )
+
+
+def reviewed_score(conn: StoreConnection, call_id: str) -> Optional[ReviewedScore]:
+    """Score current-version overrides, retaining the original verdicts and machine scorecard."""
+    from . import rubric_store
+
+    call = conn.execute("SELECT evaluation_version, rubric_id, rubric_version FROM results_calls WHERE call_id = ?", (call_id,)).fetchone()
+    if call is None or call['evaluation_version'] is None or call['rubric_version'] is None:
+        return None
+    overrides = conn.execute("SELECT criterion_id, status FROM results_verdict_overrides WHERE call_id = ? AND evaluation_version = ? ORDER BY review_version",
+                             (call_id, call['evaluation_version'])).fetchall()
+    if not overrides:
+        return None
+    rubric = rubric_store.get_version(conn, call['rubric_id'], call['rubric_version'])
+    if rubric is None:
+        return None
+    criteria = {c.criterion_id: c for c in rubric.definition.criteria}
+    statuses = {v['criterion_id']: v['status'] for v in conn.execute(
+        "SELECT criterion_id, status FROM results_verdicts WHERE call_id = ? AND evaluation_version = ?", (call_id, call['evaluation_version'])).fetchall()}
+    statuses.update({o['criterion_id']: o['status'] for o in overrides})
+    if any(cid not in criteria for cid in statuses):
+        return None
+    assessed = sum(criteria[cid].weight for cid, status in statuses.items() if status in ('PASS', 'FAIL'))
+    earned = sum(criteria[cid].weight for cid, status in statuses.items() if status == 'PASS')
+    critical = any(criteria[cid].critical and status == 'FAIL' for cid, status in statuses.items())
+    pending = critical or any(status == 'FLAGGED' for status in statuses.values())
+    overall = round(100.0 * earned / assessed, 1) if assessed else 0.0
+    return ReviewedScore(evaluation_version=call['evaluation_version'], overall_score=overall,
+                         passed=bool(assessed and overall >= rubric.definition.pass_threshold and not pending),
+                         critical_failure=critical, requires_human_review=pending)
+
+
+def project_reviewed_score(conn: StoreConnection, call_id: str) -> None:
+    score = reviewed_score(conn, call_id)
+    if score is not None:
+        conn.execute("UPDATE results_calls SET overall_score = ?, passed = ?, critical_failure = ?, requires_human_review = ? WHERE call_id = ?",
+                     (score.overall_score, int(score.passed), int(score.critical_failure), int(score.requires_human_review), call_id))
 
 
 def history(conn: StoreConnection, call_id: str) -> List[ReviewHistoryEntry]:

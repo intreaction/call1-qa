@@ -1,11 +1,5 @@
-// "How it's detected" in the category editor (contract 1.4.0, docs/SignalsEmbeddings.md §10): the
-// category's rules-engine recipe. Engine (Model or Rules); for Rules the score needed, the
-// similar-examples vote, the phrase list (words or patterns, the negation veto, live checks that
-// mirror Store's regex-safety and PII rules), the speaker (from the category), an optional call
-// position window, and the optional Gemma double-check. A recipe richer than the form (a pack's
-// nested filter) is shown as written and kept; its numbers, phrases and check stay editable.
-//
-// Built-in categories take a recipe too (`BUILTIN_EDITABLE_FIELDS` includes `recipe`).
+// Candidate tuning for the mandatory semantic similarity → Laya → Gemma pipeline.
+// Saved recipe filters remain editable; engine and uncertainty confirmation are runtime policy.
 
 import { useId, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
@@ -56,7 +50,6 @@ export function RecipeEditor({ category: c, saved, readOnly, caps, problems, onC
   const form = recipe ? parseRecipeForm(recipe.filter) : null;
   const edited = saved !== undefined && JSON.stringify(saved.recipe ?? null) !== JSON.stringify(recipe);
   const origin = recipeOriginText(recipe?.origin);
-  const engineName = useId();
 
   function setRecipe(update: (r: SignalRecipe) => void) {
     onChange((cat) => {
@@ -75,15 +68,10 @@ export function RecipeEditor({ category: c, saved, readOnly, caps, problems, onC
     });
   }
 
-  function setEngine(engine: 'rules' | 'gemma') {
+  function customizeCandidates() {
     onChange((cat) => {
-      if (engine === 'rules') {
-        if (!cat.recipe) cat.recipe = newRulesRecipe();
-        else cat.recipe.engine = 'rules';
-      } else if (cat.recipe) {
-        // Keep the recipe (its phrases and numbers) so switching back loses nothing.
-        cat.recipe.engine = 'gemma';
-      }
+      if (!cat.recipe) cat.recipe = newRulesRecipe();
+      else cat.recipe.engine = 'rules';
     });
   }
 
@@ -91,8 +79,7 @@ export function RecipeEditor({ category: c, saved, readOnly, caps, problems, onC
     <section aria-label="How it's detected" className="space-y-3" data-testid="signals-recipe-editor">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-semibold text-fg">How it's detected</h3>
-        {recipe && rules && <StatusPill tone="blue">Rules + examples</StatusPill>}
-        {(!recipe || !rules) && <StatusPill tone="neutral">Model (Gemma)</StatusPill>}
+        <StatusPill tone="blue">Semantic candidates</StatusPill>
         {edited && <StatusPill tone="yellow">Edited</StatusPill>}
       </div>
       {origin && (
@@ -111,20 +98,16 @@ export function RecipeEditor({ category: c, saved, readOnly, caps, problems, onC
         </Notice>
       )}
 
-      <fieldset className="space-y-1.5">
-        <legend className="text-xs font-medium text-fg-muted mb-1">Engine</legend>
-        <div className="flex flex-wrap gap-x-4 gap-y-1">
-          <Radio name={engineName} label="Model (Gemma)" checked={!rules} disabled={readOnly} onChange={() => setEngine('gemma')} />
-          <Radio name={engineName} label="Rules + examples" checked={rules} disabled={readOnly} onChange={() => setEngine('rules')} />
+      <p className="text-xs text-fg-muted" data-testid="signals-recipe-cascade">
+        Semantic similarity proposes candidates. Laya keeps high-confidence decisions with strong example agreement;
+        Gemma confirms uncertain candidates. This process always applies.
+      </p>
+      {!rules && (
+        <div className="space-y-2">
+          <p className="text-xs text-fg-subtle">This category uses the default semantic candidate threshold of 0.50.</p>
+          {!readOnly && <Button size="sm" onClick={customizeCandidates}>Customize candidate detection</Button>}
         </div>
-        <p className="text-xs text-fg-subtle">
-          {rules
-            ? 'Found by phrases and by how similar each segment is to labelled examples, with no model. Gemma still fills the fields.'
-            : recipe
-              ? "Gemma decides this category. Its rules recipe is kept but not used."
-              : 'Gemma reads every segment and decides this category, as before.'}
-        </p>
-      </fieldset>
+      )}
 
       {recipe && rules && (
         <div className="space-y-4 rounded-md border border-border-muted bg-canvas p-3">
@@ -182,30 +165,12 @@ export function RecipeEditor({ category: c, saved, readOnly, caps, problems, onC
               <p className="text-xs font-medium text-fg-muted">Rules</p>
               <p className="text-sm text-fg break-words">{filterText(recipe.filter)}</p>
               <p className="text-xs text-fg-subtle">
-                These rules came from a pack and use more than this form can edit, so they are kept as written. The score, phrases and double-check below stay editable.
+                These rules came from a pack and use more than this form can edit, so they are kept as written. The score, candidate settings below stay editable.
               </p>
             </div>
           )}
 
           <LexiconEditor recipe={recipe} form={form} readOnly={readOnly} caps={caps} onChange={onChange} />
-
-          <div className="space-y-1">
-            <label className="flex items-start gap-2 text-sm text-fg">
-              <input
-                type="checkbox"
-                className="mt-0.5 accent-primer-blue focus:outline-none focus-visible:ring-2 focus-visible:ring-primer-blue"
-                checked={recipe.check === 'gemma'}
-                disabled={readOnly}
-                onChange={(e) => setRecipe((r) => void (r.check = e.target.checked ? 'gemma' : 'none'))}
-              />
-              <span className={readOnly ? 'opacity-60' : ''}>
-                Gemma double-check
-                <span className="block text-xs text-fg-subtle">
-                  Gemma reads each span the rules found and confirms it (with its subcategory) or rejects it. Slower; turn it on only where it has been measured to help.
-                </span>
-              </span>
-            </label>
-          </div>
         </div>
       )}
     </section>

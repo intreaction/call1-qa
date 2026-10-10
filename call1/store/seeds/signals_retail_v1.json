@@ -364,7 +364,7 @@
           },
           "lexicon_weight": 0.2,
           "threshold": 0.375,
-          "check": "none",
+          "check": "gemma",
           "origin": "pack:retail@1 (R2, recipes-tuned.json)"
         }
       },

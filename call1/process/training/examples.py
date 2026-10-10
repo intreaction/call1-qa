@@ -491,7 +491,7 @@ class ExampleBuilder:
         if not chunk:
             return
         system, user, _schema, _max = render_batch(chunk, True)
-        answer = answer_json({row.key: {"assessment": targets2[row.key][0], "fits": targets2[row.key][1], "choice": targets2[row.key][2]}
+        answer = answer_json({row.key: _stage2_answer(row.key, *targets2[row.key])
                               for row in chunk})
         if self.size(system, user, answer) <= self.max_seq_length:
             self._check_stage2(chunk, answer, targets2)
@@ -546,7 +546,7 @@ class ExampleBuilder:
             system, user, schema, max_tokens = render_batch(batch, True)
             keys = [row.key for row in batch]
             prompt = self._prompt("signal_stage2", system, user, schema, max_tokens,
-                                  lambda keys=keys: {k: {"assessment": "The span.", "fits": "yes", "choice": SIGNAL_OTHER_OPTION} for k in keys})
+                                  lambda keys=keys: {k: _stage2_answer(k, "The span.", "yes", SIGNAL_OTHER_OPTION) for k in keys})
             for row in batch:
                 hit = hit_of_row[row.key]
                 want: Optional[str]
@@ -580,11 +580,14 @@ class ExampleBuilder:
         if criterion.check.check_type is not CheckType.SEMANTIC_JUDGEMENT:
             raise _Skip("not_model")
         prompt_input = self.sources.content(src["prompt_input"]) if "prompt_input" in src else None
+        if prompt_input is not None and prompt_input.template_id.endswith(".sectioned"):
+            raise _Skip("sectioned_qa")  # Multi-request evidence synthesis cannot be rebuilt as one training prompt.
         if prompt_input is not None and prompt_input.prompt_digest == canonical_digest([]):  # type: ignore[attr-defined]
             raise _Skip("not_model")  # a gate FLAG: the primary never called a model
         if not has_findings(hjob):
             raise _Skip("no_pii_findings")
-        system, user, transcript, check = qa_prompt(hjob, masked=True)
+        system, user, transcript, check = qa_prompt(hjob, masked=True,
+                                                  compact=bool(prompt_input and prompt_input.template_id.endswith(".compact")))
         digest = canonical_digest([[{"role": "system", "content": system}, {"role": "user", "content": user}]])
         if prompt_input is not None and prompt_input.masked and digest != prompt_input.prompt_digest:  # type: ignore[attr-defined]
             self.result.notes["template_drift"] += 1
@@ -847,6 +850,15 @@ def _stage2_judge(row, pid: str, want: Optional[str]):
     return judge
 
 
+def _stage2_answer(key: str, assessment: str, fits: str, choice: str) -> Dict[str, Any]:
+    answer = {}
+    if key.startswith("intent."):
+        answer["objective_status"] = "new_request" if fits == "yes" else "unclear"
+        answer["speech_act"] = "request" if fits == "yes" else "unclear"
+    answer.update(assessment=assessment, fits=fits, choice=choice)
+    return answer
+
+
 def _stage2_script(row, pid: str, want: Optional[str]):
     def script(drafts: Dict[str, Any], correct: bool) -> None:
         options = [o for o, _ in row.options if o != SIGNAL_NOT_OPTION]
@@ -858,7 +870,7 @@ def _stage2_script(row, pid: str, want: Optional[str]):
             answer = {"assessment": "Yes.", "fits": "yes", "choice": yes_choice if yes_choice in options else SIGNAL_OTHER_OPTION}
         else:
             answer = {"assessment": "No.", "fits": "no", "choice": SIGNAL_OTHER_OPTION}
-        drafts[pid][row.key] = answer
+        drafts[pid][row.key] = _stage2_answer(row.key, answer["assessment"], answer["fits"], answer["choice"])
     return script
 
 

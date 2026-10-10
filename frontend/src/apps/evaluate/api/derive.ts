@@ -41,14 +41,15 @@ export interface CallBadge extends StateDisplay {
 /**
  * The one badge the calls list shows for a call's QA: Analyzing / Needs attention / Partial /
  * Stale / score. A stale or partial result still shows its (old or partial) score next to the
- * label; an available one shows the score with Pass / Fail / Critical fail.
+ * label; an available one shows the score with Pass / Fail / Critical fail / Needs Review.
  */
-export function callQaBadge(call: Pick<CallListItem, 'qa_state' | 'overall_score' | 'passed' | 'critical_failure'>): CallBadge {
+export function callQaBadge(call: Pick<CallListItem, 'qa_state' | 'overall_score' | 'passed' | 'critical_failure' | 'requires_human_review'>): CallBadge {
   const base = resultStateDisplay(call.qa_state);
   const score = call.overall_score ?? null;
   if (call.qa_state === 'available') {
     if (score === null) return { ...resultStateDisplay('pending'), score: null };
     if (call.critical_failure) return { label: 'Critical fail', tone: 'red', description: 'A critical criterion failed.', score };
+    if (call.requires_human_review) return { label: 'Needs Review', tone: 'yellow', description: 'Unresolved checks await review. The score is provisional and is based on decided checks only.', score };
     if (call.passed === false) return { label: 'Fail', tone: 'red', description: 'The scorecard did not pass.', score };
     if (call.passed === true) return { label: 'Pass', tone: 'green', description: 'The scorecard passed.', score };
     return { label: 'Scored', tone: 'green', description: base.description, score };
@@ -60,7 +61,7 @@ export function callQaBadge(call: Pick<CallListItem, 'qa_state' | 'overall_score
 const VERDICT_STATUS_DISPLAY: Record<VerdictStatus, StateDisplay> = {
   PASS: { label: 'Pass', tone: 'green', description: 'This criterion passed.' },
   FAIL: { label: 'Fail', tone: 'red', description: 'This criterion did not pass.' },
-  FLAGGED: { label: 'Flagged', tone: 'yellow', description: 'The model could not decide confidently; a human should review it.' },
+  FLAGGED: { label: 'Needs Review', tone: 'yellow', description: 'This check is unresolved, not a confirmed failure; a human should review it.' },
   NOT_APPLICABLE: { label: 'Not applicable', tone: 'neutral', description: 'This criterion does not apply to this call.' },
 };
 

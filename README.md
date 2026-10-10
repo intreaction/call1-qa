@@ -47,7 +47,7 @@ Demo data stays in `data/demo/`. Demo sign-in is intended for localhost and fict
 
 ## Process real recordings
 
-Real inference runs with separately installed models. On Apple Silicon, install `requirements-mlx.txt`, provision the weights, and follow [Operations](docs/Operations.md) for configuration and model paths.
+Real inference runs with separately installed models. On Apple Silicon, install `requirements-mlx.txt`, provision the weights, and follow [Operations](docs/Operations.md) for configuration and model paths. Contact Signals uses semantic similarity → Laya → Gemma: install Ollama 0.40.0 or newer and run `ollama pull laya`. Laya triages semantic candidates; uncertain decisions are confirmed by Gemma. See the [decision cascade](call1/process/README.md#contact-signals-v2-contract-130) for the confidence and semantic agreement requirements.
 
 ```sh
 CALL1_BACKEND=mlx python -m call1.launch --demo --handlers real

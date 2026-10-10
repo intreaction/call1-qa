@@ -33,6 +33,7 @@ export function resolveRibbonPalette(theme: string) {
       pale: ribbonColor(0.82, 0.94, 0.98),
       callerTint: ribbonColor(0.7, 0.33, 0.04),
       callerPale: ribbonColor(0.98, 0.95, 0.88),
+      neutralTint: ribbonColor(0.42, 0.47, 0.53),
     };
   }
   return {
@@ -40,6 +41,7 @@ export function resolveRibbonPalette(theme: string) {
     pale: ribbonColor(0.72, 0.95, 0.99),
     callerTint: ribbonColor(0.89, 0.63, 0.36),
     callerPale: ribbonColor(1.0, 0.94, 0.84),
+    neutralTint: ribbonColor(0.48, 0.55, 0.63),
   };
 }
 
@@ -72,8 +74,9 @@ export const VERTEX_SHADER = `
 
 export const FRAGMENT_SHADER = `
   precision highp float;
-  uniform float uLayer,uRole,uProgress,uCursor,uHover;
-  uniform vec3 uTint,uPale,uCallerTint,uCallerPale;
+  uniform float uLayer,uProgress,uCursor,uHover;
+  uniform sampler2D uSpeakers;
+  uniform vec3 uTint,uPale,uCallerTint,uCallerPale,uNeutralTint;
   varying vec2 vUv;
   varying vec3 vPosition;
   void main(){
@@ -81,8 +84,13 @@ export const FRAGMENT_SHADER = `
     float facing=abs(normal.z);
     float silk=pow(abs(dot(normal,normalize(vec3(-.3,.8,1.0)))),9.0);
     float rim=pow(1.0-facing,2.0);
-    vec3 tint=uRole<.5?uTint:uCallerTint;
-    vec3 pale=uRole<.5?uPale:uCallerPale;
+    vec4 speakers=texture2D(uSpeakers,vec2(vUv.x,0.5));
+    float role=floor((uLayer<.5?speakers.r:speakers.g)*3.0+.5);
+    // 0 = unattributed/gap, 1 = agent, 2 = caller, 3 = overlap.
+    // During overlap each ribbon keeps one speaker's color; amplitude stays mixed for mono.
+    bool caller=role==2.0||(role==3.0&&uLayer>.5);
+    vec3 tint=role==0.0?uNeutralTint:(caller?uCallerTint:uTint);
+    vec3 pale=role==0.0?mix(uPale,uCallerPale,.5):(caller?uCallerPale:uPale);
     float thread=.5+.5*sin(vUv.y*900.0);
     float hem=pow(abs(vUv.y-.5)*2.0,20.0);
     float inspected=exp(-pow((vUv.x-uCursor)*12.0,2.0))*uHover;
@@ -100,6 +108,28 @@ export interface Scene3 {
   material: THREE.ShaderMaterial;
   layers: THREE.Mesh[];
   texture: THREE.DataTexture;
+  speakers: THREE.DataTexture;
+}
+
+/** Time-aligned activity, independent of the PCM envelope. Stereo needs explicit channel
+ * evidence; mono colors both decorative ribbons without pretending to separate the voices. */
+export function speakerTimeline(turns: ReadonlyArray<{ start: number; end: number; speaker: string; channel?: number | null }>,
+                                duration: number, channels: number): Uint8Array {
+  const data = new Uint8Array(COUNT * 4);
+  if (!Number.isFinite(duration) || duration <= 0) return data;
+  for (const turn of turns) {
+    const role = turn.speaker === 'AGENT' ? 1 : turn.speaker === 'CALLER' ? 2 : 0;
+    if (!role || !Number.isFinite(turn.start) || !Number.isFinite(turn.end) || turn.end <= turn.start) continue;
+    const lanes = channels === 1 ? [0, 1] : turn.channel === 0 || turn.channel === 1 ? [turn.channel] : [];
+    // A texel describes its center time. Half-open intervals agree with transcript seeking.
+    const start = Math.max(0, Math.ceil(turn.start / duration * COUNT - .5));
+    const end = Math.min(COUNT, Math.ceil(turn.end / duration * COUNT - .5));
+    for (let i = start; i < end; i++) {
+      for (const lane of lanes) data[i * 4 + lane] |= role;
+    }
+  }
+  for (let i = 0; i < data.length; i++) data[i] *= 85;
+  return data;
 }
 
 /** Build the two-layer thread scene on `canvas`. Throws when WebGL is unavailable. */
@@ -114,12 +144,16 @@ export function createScene(canvas: HTMLCanvasElement, envelope: Float32Array): 
     const texture = new THREE.DataTexture(envelope, COUNT, 1, THREE.RGBAFormat, THREE.FloatType);
     texture.minFilter = texture.magFilter = THREE.LinearFilter;
     texture.needsUpdate = true;
+    const speakers = new THREE.DataTexture(new Uint8Array(COUNT * 4), COUNT, 1, THREE.RGBAFormat);
+    speakers.minFilter = speakers.magFilter = THREE.NearestFilter;
+    speakers.needsUpdate = true;
     const material = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
       uniforms: {
         uEnvelope: { value: texture },
+        uSpeakers: { value: speakers },
         uTime: { value: 0 },
         uCursor: { value: 0.5 },
         uHover: { value: 0 },
@@ -127,11 +161,11 @@ export function createScene(canvas: HTMLCanvasElement, envelope: Float32Array): 
         uClick: { value: -10 },
         uProgress: { value: 0 },
         uLayer: { value: 0 },
-        uRole: { value: 0 },
         uTint: { value: new THREE.Color() },
         uPale: { value: new THREE.Color() },
         uCallerTint: { value: new THREE.Color() },
         uCallerPale: { value: new THREE.Color() },
+        uNeutralTint: { value: new THREE.Color() },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
@@ -140,14 +174,14 @@ export function createScene(canvas: HTMLCanvasElement, envelope: Float32Array): 
     for (let layer = 0; layer < 2; layer++) {
       const mat = material.clone();
       mat.uniforms.uEnvelope.value = texture;
+      mat.uniforms.uSpeakers.value = speakers;
       mat.uniforms.uLayer.value = layer;
-      mat.uniforms.uRole.value = layer; // provisional; corrected from the turn->channel map on load
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 1, 512, 24), mat);
       mesh.frustumCulled = false;
       scene.add(mesh);
       layers.push(mesh);
     }
-    return { renderer, scene, camera, material, layers, texture };
+    return { renderer, scene, camera, material, layers, texture, speakers };
   } catch (error) {
     renderer.dispose();
     throw error;
@@ -163,6 +197,7 @@ export function syncPalette(layers: THREE.Mesh[]) {
     u.uPale.value = palette.pale;
     u.uCallerTint.value = palette.callerTint;
     u.uCallerPale.value = palette.callerPale;
+    u.uNeutralTint.value = palette.neutralTint;
   }
 }
 
@@ -173,6 +208,7 @@ export function disposeScene(s: Scene3) {
   }
   s.material.dispose();
   s.texture.dispose();
+  s.speakers.dispose();
   s.renderer.dispose();
 }
 

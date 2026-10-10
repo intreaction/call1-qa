@@ -248,7 +248,7 @@ export function Chip({ tone = 'neutral', children, title, icon: Icon }: { tone?:
  * A modal dialog: `role="dialog"`, labelled by its title, focus moved inside on open and returned
  * on close, Escape closes it, and Tab stays inside while it is open.
  */
-export function Dialog({ title, onClose, children, footer }: { title: string; onClose(): void; children: ReactNode; footer?: ReactNode }) {
+export function Dialog({ title, onClose, children, footer, size = 'default' }: { title: string; onClose(): void; children: ReactNode; footer?: ReactNode; size?: 'default' | 'wide' }) {
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -257,7 +257,7 @@ export function Dialog({ title, onClose, children, footer }: { title: string; on
     (first ?? panel.current)?.focus();
     return () => previous?.focus?.();
   }, []);
-  const onKeyDown = (e: React.KeyboardEvent) => {
+  const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.stopPropagation();
       onClose();
@@ -268,7 +268,10 @@ export function Dialog({ title, onClose, children, footer }: { title: string; on
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
+    if (!panel.current.contains(document.activeElement)) {
+      e.preventDefault();
+      first.focus();
+    } else if (e.shiftKey && document.activeElement === first) {
       e.preventDefault();
       last.focus();
     } else if (!e.shiftKey && document.activeElement === last) {
@@ -276,6 +279,10 @@ export function Dialog({ title, onClose, children, footer }: { title: string; on
       first.focus();
     }
   };
+  useEffect(() => {
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  });
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/40 p-4 overflow-y-auto" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
@@ -284,10 +291,9 @@ export function Dialog({ title, onClose, children, footer }: { title: string; on
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        onKeyDown={onKeyDown}
-        className="w-full max-w-lg rounded-lg border border-border bg-canvas shadow-xl focus:outline-none"
+        className={`w-full ${size === 'wide' ? 'max-w-4xl max-h-[90dvh] flex flex-col' : 'max-w-lg'} rounded-lg border border-border bg-canvas shadow-xl focus:outline-none`}
       >
-        <header className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border-muted">
+        <header className="shrink-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-border-muted">
           <h2 id={titleId} className="text-sm font-semibold text-fg">
             {title}
           </h2>
@@ -300,7 +306,7 @@ export function Dialog({ title, onClose, children, footer }: { title: string; on
             <X className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </header>
-        <div className="p-4 space-y-3">{children}</div>
+        <div className={`p-4 space-y-3 ${size === 'wide' ? 'min-h-0 overflow-y-auto overscroll-contain' : ''}`}>{children}</div>
         {footer && <footer className="flex flex-wrap justify-end gap-2 px-4 py-3 border-t border-border-muted">{footer}</footer>}
       </div>
     </div>

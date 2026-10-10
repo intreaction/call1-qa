@@ -87,6 +87,7 @@ def override_verdict(call_id: str, criterion_id: str, body: VerdictOverride, con
         training_labels.record_verdict_override(conn, call_id=call_id, conversation_id=row["conversation_id"], override_id=override_id,
                                                 criterion_id=criterion_id, evaluation_version=version, original_status=verdict.status,
                                                 status=body.status, reason_code=body.reason_code)
+        review_state.project_reviewed_score(conn, call_id)
         review_state.add_history(conn, call_id, ReviewHistoryKind.VERDICT_OVERRIDE, account_id=session.account_id, review_version=new_version,
                                  evaluation_version=version, payload={"criterion_id": criterion_id, "original_status": verdict.status.value,
                                                                       "status": body.status.value,

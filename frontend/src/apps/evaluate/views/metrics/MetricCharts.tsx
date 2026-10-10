@@ -85,7 +85,7 @@ export function DailyChart({
 const outcomeConfig = {
   PASS: { label: "Pass", color: chartColors.pass },
   FAIL: { label: "Fail", color: chartColors.fail },
-  FLAGGED: { label: "Flagged", color: chartColors.flagged },
+  FLAGGED: { label: "Needs Review", color: chartColors.flagged },
   NOT_APPLICABLE: { label: "N/A", color: chartColors.na },
 } satisfies ChartConfig;
 export function OutcomesChart({

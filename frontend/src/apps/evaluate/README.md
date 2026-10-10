@@ -91,6 +91,14 @@ Store's invitation links are `<store>/enroll#<token>`; the app rewrites that to
 `/#/enroll?token=<token>` before the first render and removes the token from the address bar once
 enrollment succeeds.
 
+## Reviewed scores
+
+The Workbench applies the latest override per criterion only when it matches the current
+evaluation version. The scorecard labels the result as reviewed, shows the original machine
+score and reviewer notes, and preserves the original evidence. Call-list badges and metrics use
+the same reviewed score. Unresolved FLAGGED checks stay provisional; a newer machine evaluation
+does not inherit stale overrides.
+
 ## View contract (for the views agent)
 
 Each file in `views/` default-exports one component. The shell renders exactly one per route and
@@ -114,7 +122,25 @@ All seven views are implemented: `CallsView`, `WorkbenchView`, `RubricsView`, `S
 `QueueView`, `EscalationsView` and `MetricsView`. Views render inside `<main>` (the shell provides the header,
 nav, offline banner and padding); each starts with `PageHeader` and a `max-w-* mx-auto` container.
 
-**Workbench** (`views/WorkbenchView.tsx`) reads `GET /store/v1/calls/{call_id}` (`CallDetail`), then
+**Workbench** keeps the audio player above a four-panel dashboard: **Summary**, **Transcript**,
+**Contact signals**, and a compact **Scorecard**. Each panel scrolls independently; the desktop
+layout uses two columns and small screens stack the panels. The scorecard shows an overview and
+colored criterion squares. A carousel shows the most recent application of each distinct rubric
+from immutable evaluation versions; earlier applications are
+labelled and read-only. Criterion squares open an anchored, nonmodal inspection card with the
+verdict, quoted evidence, reasoning, and review actions. Its previous/next controls step through
+the checks; Escape or a click outside dismisses it and restores focus. The full scorecard review
+dialog remains available for score calculations and supervisor actions.
+Evidence links close the dialog when needed, seek the audio, and focus the referenced transcript
+turn. Closing the dialog with Escape returns focus to its opener and preserves playback.
+Contact signals use compact rows with a one-line quote preview and a counts overview. Each row
+can jump to the transcript; its separate details disclosure expands the full quote, extracted
+fields, reasoning, segment evidence, and reviewer controls.
+Reanalysis lives in the header’s upper-right menu for users with `request_reanalysis` permission.
+Choose full, QA, summary, contact signals, or search-index reanalysis, then add optional notes in
+the request dialog. Failed requests retain their idempotency key for a safe retry.
+
+The Workbench (`views/WorkbenchView.tsx`) reads `GET /store/v1/calls/{call_id}` (`CallDetail`), then
 gates the transcript/summary/contact-signals fetches on that call's `results` (`ResultGroup.state`)
 so a still-analyzing section never 404s. Verdict override, escalation resolution and "retain
 review" all read `expected_version` from `GET /store/v1/calls/{call_id}/review`
@@ -135,14 +161,21 @@ data-agnostic: plain props (`sourceKey`, `loadAudio`, `audioRef`, `currentTime`/
 itself (`tests/test_split_boundaries.py`); the Workbench's `loadAudio` reads
 `GET /store/v1/calls/{call_id}/audio` through `client.raw()`, so the session cookie applies.
 
-- **Ported as-is:** decode with `AudioContext` behind an `AbortController` and a generation guard;
+- **Audio and animation:** decode with `AudioContext` behind an `AbortController` and a generation guard;
   2048 RMS windows, 0.65 gamma, triangular smoothing into a float `DataTexture`; two
-  `ShaderMaterial` ribbons (teal Agent, amber Caller, mapped from each turn's `channel`); hover
+  `ShaderMaterial` ribbons; hover
   wake, click ripple, playhead, hover line and time tip; the detail drawer with the turn's text;
   palette sync on theme change (`call1:theme-change` and the `data-theme` attribute);
   IntersectionObserver and `document.hidden` pause the loop; context-loss handling; full disposal
   (meshes, materials, texture, renderer, AudioContext). The `fabric-*` chrome comes from the shared
   `index.css`.
+- **Speaker colors:** a separate time-aligned texture colors each speaking interval teal for
+  Agent or amber for Caller. Gaps and unassigned turns stay neutral; overlapping speakers use
+  both ribbon colors. Mono keeps its original mixed-audio amplitude on both decorative ribbons;
+  stereo uses explicit turn `channel` evidence and leaves unmapped channels neutral. Colors
+  refresh when transcript timestamps or speaker assignments change, without decoding audio again.
+  The hover detail names all overlapping roles. These are transcript/diarization timings, not
+  isolated voice tracks.
 - **Changed:** markers — contact signals (Flag) and verdict evidence (Quote, labelled with the
   verdict status, "(overridden)" when a reviewer overrode it) — sit in a lane above the stage rather
   than inside the slider; a speaker lane under the ribbon shows transcript turns. The stage is the
@@ -192,6 +225,13 @@ The lazy-loaded Metrics view uses Recharts 3 through shadcn chart components ada
 existing theme tokens (`components/charts/chart.tsx`; MIT attribution beside the source). Your
 center shows daily score/volume area charts, criterion outcome stacks and accessible values.
 Daily buckets are evaluation dates in UTC; date filters select call creation time.
+
+QA displays FLAGGED as **Needs Review**, separately from FAIL. A provisional score includes
+only PASS and FAIL weights; unresolved and not-applicable checks do not lower it. Even a
+provisional 100 remains Needs Review until settled. `passed: false` with
+`requires_human_review: true` means pending review, unless `critical_failure` confirms a failure.
+Finalized averages and call pass rates omit provisional evaluations; confirmed critical failures
+remain included. Criterion pass rates divide PASS by PASS + FAIL, while review counts stay visible.
 
 **Peer comparison** is a separate, demo-only explorer: two fictional cohorts, three measures,
 weekly trends, center ranking, interpolated median/quartiles and a separate retail coaching
@@ -266,30 +306,30 @@ are **unscored**: every surface says so, and nothing here touches a score or the
 after Rubrics. Reviewers and supervisors read it; only admins (`manage_signals`, decision 22 Q1)
 edit, and without the permission every control is hidden or disabled with a "Read-only" note.
 
-- **Pipeline selector:** admins can switch between v1, shadow and v2 (`PUT /signals/settings`,
-  `expected_record_version`). Shadow and v2 require a qualified Process classifier. The explanatory
-  pipeline status banner is omitted.
-- **Detection:** each category's recipe selects Rules + examples or Model (Gemma). There is no
-  taxonomy-wide detection switch or status banner. The legacy settings field remains accepted for
-  compatibility and does not override recipes.
+- **Pipeline:** a read-only status describes semantic similarity → Laya → Gemma. New and
+  upgraded Stores select v2 without a v1 fallback; historical v1 results remain readable.
+- **Detection:** the semantic → Laya → Gemma cascade always applies. Category recipes tune
+  candidate thresholds and filters; the editor offers no engine replacement or optional Gemma
+  confirmation. Categories without an active candidate recipe use the 0.50 semantic default.
 - **Tree:** the 8 built-ins (lock icon and the text "Built-in"), then custom categories; each node
   shows its gloss, speaker scope, active subcategory and field counts, and calls with a hit in the
   last 7 days (`GET /metrics/signals?start=<7 days ago>&include_inactive=true`).
 - **Category editor:** name and gloss with counters (built-ins: disabled, fixed by Call1),
   description and speaker (custom only), examples, stage-1 and stage-2 thresholds (empty = "Engine
-  default"; the hint calls it a calibrated model score), quote narrowing, subcategories (add,
+  default"; the hint distinguishes a decision score from an accuracy probability), quote narrowing, subcategories (add,
   edit, deactivate, reorder; "Other" and "Not <category>" shown as fixed rows) and fields. The
   caller-detail hint remains under example inputs; the repeated warning at the top is omitted.
 - **How it's detected** (`views/signals/RecipeEditor.tsx`, `data-testid="signals-recipe-editor"`;
-  built-ins too, since `recipe` is a built-in editable field): the engine (Model (Gemma) or Rules +
-  examples; switching to Model keeps the recipe with `engine: gemma`), the pack origin ("From the
-  Retail pack v1, tuned on 25 public calls", plus ", edited here"), and for Rules: "Score needed"
-  (threshold, slider plus number, 0.05–0.95), "Must also pass" (nothing, a phrase, similar to
-  examples with its minimum share, either, or both), the speaker (read-only, the category's; a
-  custom category's speaker change moves the recipe's speaker rule with it), "Where in the call"
-  (anywhere, quarter and half presets, or a custom start window), the phrase list (words or
-  patterns, add and remove, "N of 24", phrase weight, negation window 0–6) and "Gemma
-  double-check" (`check: gemma`). A pack filter richer than the form (nested or `not` groups, a
+  built-ins too, since `recipe` is a built-in editable field): the mandatory cascade, the pack
+  origin ("From the Retail pack v1, tuned on 25 public calls", plus ", edited here"), and candidate
+  controls: "Score needed" (threshold, slider plus number, 0.05–0.95), "Must also pass" (nothing,
+  a phrase, similar to examples with its minimum share, either, or both), speaker (read-only,
+  the category's), "Where in the call" (anywhere, quarter and half presets, or a custom start
+  window), and phrases (words or patterns, add/remove, "N of 24", phrase weight, negation window
+  0–6). "Customize candidate detection" creates a recipe for a category using the semantic
+  default. Confirmation is runtime policy: strong Laya/semantic agreement keeps a candidate;
+  uncertainty goes to Gemma. Saved legacy engine/check fields remain compatible data, with no
+  bypass control in this editor. A pack filter richer than the form (nested or `not` groups, a
   phrase rule with its own phrases) is shown as written and kept. The new-phrase input checks as
   you type (`api/signalRules.ts`): the contract's regex-safe subset (`lexicon_phrase_problem`: no
   look-arounds, named groups, inline flags, back-references, or unbounded repeat around a repeat;
@@ -354,8 +394,9 @@ time range to `span_end`, and a "Show N more segments" disclosure (`aria-expande
 part's quote as a button that jumps to its turn. Feedback saved on a part while it was a
 separate hit shows as "A segment was confirmed/dismissed before the segments merged" until the
 merged hit gets its own verdict. A hit that carries `why` (contract 1.4.0) gets a "Why"
-disclosure (`data-testid="signal-why"`, `aria-expanded`): "Found by rules" or "Found by Gemma",
-a "Gemma double-checked ✓" chip when `check` is `confirmed`, and when opened "Found by rules ·
+disclosure (`data-testid="signal-why"`, `aria-expanded`): "Found by semantic similarity" for the
+semantic/Laya cascade, or "Found by rules" / "Found by Gemma" for historical decisions,
+and when opened "Found by rules ·
 score 0.62 ≥ 0.38 · similar examples 0.55 · phrase 'refund' (matched, +0.50)", who decided the
 category and subcategory, each rule's outcome, and the up-to-3 nearest example IDs with their
 cosines (never text). A hit without `why` shows nothing new. A call with more than 8 signals (real Gemma output runs to 40-odd)

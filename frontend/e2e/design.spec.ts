@@ -393,17 +393,13 @@ test.describe('c8 design system — Signals page and Workbench contact-signals s
       }
     }
   });
-
-  test('c8 (signals): the pipeline selector identifies its current mode in text, not color alone', async ({ createInvitedUser }) => {
+  test('c8 (signals): the current process is explained in text', async ({ createInvitedUser }) => {
     const admin = await createInvitedUser('admin');
     await admin.page.goto('/#/signals');
-    await expect(admin.page.getByRole('heading', { name: 'Signals', exact: true })).toBeVisible();
-
-    // The compact header now exposes the mode in a labeled select instead of a prose banner.
-    // Check the displayed selection as well as its value to preserve the accessibility assertion.
-    const pipeline = admin.page.getByRole('combobox', { name: 'Pipeline', exact: true });
-    await expect(pipeline).toBeVisible();
-    await expect(pipeline).toHaveValue(/^(v1|shadow|v2)$/);
-    await expect(pipeline.locator('option:checked')).toHaveText(/^(v1|Shadow \(v1 \+ v2 compare\)|v2)$/);
+    const pipeline = admin.page.getByTestId('signals-pipeline-banner');
+    await expect(pipeline).toContainText('Semantic similarity → Laya → Gemma');
+    await expect(pipeline).toContainText('uncertain candidates go to Gemma');
+    await expect(pipeline.getByRole('combobox')).toHaveCount(0);
   });
+
 });

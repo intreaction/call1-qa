@@ -4103,6 +4103,8 @@ export type components = {
              * @description The machine version the decisions below were made against.
              */
             reviewed_evaluation_version: number | null;
+            /** @description Score after the latest override per criterion of the current evaluation. Absent for stale decisions or no overrides; never changes the immutable machine scorecard. */
+            reviewed_score: components["schemas"]["ReviewedScore"] | null;
             /** Reviewer Notes */
             reviewer_notes: string | null;
             staleness: components["schemas"]["ReviewStaleness"];
@@ -4907,7 +4909,7 @@ export type components = {
             /**
              * Max Extraction Spans Per Call
              * @description Spans stage 3 extracts per call; spans past the cap stay categorized without fields and the result is partial (extraction_cap).
-             * @default 24
+             * @default 64
              */
             max_extraction_spans_per_call: number;
             /**
@@ -8952,6 +8954,22 @@ export type components = {
             /** Rubric Id */
             rubric_id: string | null;
         };
+        /**
+         * ReviewedScore
+         * @description Current-version reviewer decisions applied to the pinned rubric; machine artifacts remain unchanged.
+         */
+        ReviewedScore: {
+            /** Critical Failure */
+            critical_failure: boolean;
+            /** Evaluation Version */
+            evaluation_version: number;
+            /** Overall Score */
+            overall_score: number;
+            /** Passed */
+            passed: boolean;
+            /** Requires Human Review */
+            requires_human_review: boolean;
+        };
         /** ReviewerAccount */
         ReviewerAccount: {
             /** Authenticator Count */
@@ -12111,6 +12129,19 @@ export type components = {
              * @default 0
              */
             subcategory_share: number;
+            /** @description Why Laya could not score the candidate; Gemma must confirm it. */
+            system_one_fallback: components["schemas"]["JobErrorCode"] | null;
+            /**
+             * System One Kept
+             * @description Laya and strong semantic category/subcategory agreement allowed this span to bypass Gemma confirmation.
+             * @default false
+             */
+            system_one_kept: boolean;
+            /**
+             * System One Score
+             * @description Optional Laya category score, not a calibrated accuracy probability.
+             */
+            system_one_score: number | null;
             /** Threshold */
             threshold: number;
         };
@@ -12335,15 +12366,15 @@ export type components = {
             fallback_extraction_entry_id: string | null;
             /**
              * Pipeline
-             * @description v1: today's passes (Store still projects v1 hits). shadow: v1 publishes and every v1 publish gets a companion v2 compare request. v2: new calls and reanalysis run v2.
-             * @default v1
+             * @description v2 is the current process for new calls and reanalysis. v1 and shadow remain readable for historical snapshots.
+             * @default v2
              * @enum {string}
              */
             pipeline: "v1" | "shadow" | "v2";
             /**
              * V1 Fallback
-             * @description v2 selected but no usable stage-1/stage-2 entry on the host: build v1, labelled with pipeline_note. Otherwise the merge records configuration_error.
-             * @default true
+             * @description Legacy/fake planner compatibility: permits v1 when no usable v2 entries exist, labelled with pipeline_note. The real semantic/Laya/Gemma process never downgrades to v1.
+             * @default false
              */
             v1_fallback: boolean;
         };
@@ -12363,15 +12394,15 @@ export type components = {
             fallback_extraction_entry_id?: string | null;
             /**
              * Pipeline
-             * @description v1: today's passes (Store still projects v1 hits). shadow: v1 publishes and every v1 publish gets a companion v2 compare request. v2: new calls and reanalysis run v2.
-             * @default v1
+             * @description v2 is the current process for new calls and reanalysis. v1 and shadow remain readable for historical snapshots.
+             * @default v2
              * @enum {string}
              */
             pipeline: "v1" | "shadow" | "v2";
             /**
              * V1 Fallback
-             * @description v2 selected but no usable stage-1/stage-2 entry on the host: build v1, labelled with pipeline_note. Otherwise the merge records configuration_error.
-             * @default true
+             * @description Legacy/fake planner compatibility: permits v1 when no usable v2 entries exist, labelled with pipeline_note. The real semantic/Laya/Gemma process never downgrades to v1.
+             * @default false
              */
             v1_fallback: boolean;
         };
@@ -12391,15 +12422,15 @@ export type components = {
             fallback_extraction_entry_id: string | null;
             /**
              * Pipeline
-             * @description v1: today's passes (Store still projects v1 hits). shadow: v1 publishes and every v1 publish gets a companion v2 compare request. v2: new calls and reanalysis run v2.
-             * @default v1
+             * @description v2 is the current process for new calls and reanalysis. v1 and shadow remain readable for historical snapshots.
+             * @default v2
              * @enum {string}
              */
             pipeline: "v1" | "shadow" | "v2";
             /**
              * V1 Fallback
-             * @description v2 selected but no usable stage-1/stage-2 entry on the host: build v1, labelled with pipeline_note. Otherwise the merge records configuration_error.
-             * @default true
+             * @description Legacy/fake planner compatibility: permits v1 when no usable v2 entries exist, labelled with pipeline_note. The real semantic/Laya/Gemma process never downgrades to v1.
+             * @default false
              */
             v1_fallback: boolean;
         };

@@ -659,7 +659,7 @@ class RubricEvaluator:
                 )
 
             verdicts.append(verdict)
-            if verdict.status == VerdictStatus.NOT_APPLICABLE:
+            if verdict.status in (VerdictStatus.NOT_APPLICABLE, VerdictStatus.FLAGGED):
                 total_weight -= criterion.weight
             if verdict.status == VerdictStatus.FLAGGED:
                 requires_review = True
@@ -1244,8 +1244,10 @@ class RubricEvaluator:
         evidence, and the guidance clauses are quoted verbatim. The model is
         told the transcript is data, not instructions.
         """
-        from call1.qa_output import QA_SYSTEM, QA_SCHEMA
+        from call1.qa_output import QA_SYSTEM, QA_SCHEMA, QA_DECISION_CHECKLIST
         payload = {
+            "transcript": [{"turn_id": t.turn_id, "speaker": t.speaker.value,
+                            "text": t.text} for t in turns],
             "criterion": {
                 "policy": check.policy_context or "",
                 "pass_when": check.pass_when or "",
@@ -1253,11 +1255,10 @@ class RubricEvaluator:
                 "not_applicable_when": check.not_applicable_when or "",
                 "quote_speaker": check.speaker.value if check.speaker else "any speaker",
             },
-            "transcript": [{"turn_id": t.turn_id, "speaker": t.speaker.value,
-                            "text": t.text} for t in turns],
+            "decision_checklist": QA_DECISION_CHECKLIST,
         }
         # JSON escaping prevents speech from masquerading as prompt delimiters.
-        return (QA_SYSTEM + "\nOutput schema: " + json.dumps(QA_SCHEMA) +
+        return ("Output schema: " + json.dumps(QA_SCHEMA) +
                 "\nEvaluate this input data:\n" + json.dumps(payload, ensure_ascii=False))
 
     @staticmethod

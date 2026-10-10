@@ -216,17 +216,17 @@ export default function MetricsView({ client, session }: MetricsViewProps) {
                   title={`${execQuery.data.total_hours_audited.toFixed(2)} hours of audited call audio`}
                 />
                 <Stat
-                  label="Average score"
+                  label="Finalized average score"
                   value={
-                    execQuery.data.total_audited_calls
+                    execQuery.data.total_audited_calls - execQuery.data.supervisor_escalations + execQuery.data.critical_compliance_breaches > 0
                       ? execQuery.data.average_score.toFixed(1)
                       : "—"
                   }
                 />
                 <Stat
-                  label="Pass rate"
+                  label="Finalized pass rate"
                   value={
-                    execQuery.data.total_audited_calls
+                    execQuery.data.total_audited_calls - execQuery.data.supervisor_escalations + execQuery.data.critical_compliance_breaches > 0
                       ? `${execQuery.data.pass_rate_pct.toFixed(1)}%`
                       : "—"
                   }
@@ -292,17 +292,17 @@ export default function MetricsView({ client, session }: MetricsViewProps) {
                     value={rubricMetricsQuery.data.total_calls_evaluated}
                   />
                   <Stat
-                    label="Average score"
+                    label="Finalized average score"
                     value={
-                      rubricMetricsQuery.data.total_calls_evaluated
+                      rubricMetricsQuery.data.daily.length > 0
                         ? rubricMetricsQuery.data.average_score.toFixed(1)
                         : "—"
                     }
                   />
                   <Stat
-                    label="Pass rate"
+                    label="Finalized pass rate"
                     value={
-                      rubricMetricsQuery.data.total_calls_evaluated
+                      rubricMetricsQuery.data.daily.length > 0
                         ? `${rubricMetricsQuery.data.pass_rate_pct.toFixed(1)}%`
                         : "—"
                     }
@@ -316,7 +316,7 @@ export default function MetricsView({ client, session }: MetricsViewProps) {
                     <span className="text-fg-muted">
                       {" "}
                       {focus.counts.FAIL} failures and {focus.counts.FLAGGED}{" "}
-                      flagged verdicts—the largest review volume in this rubric.
+                      checks needing review. These are separate outcomes.
                     </span>
                   </div>
                 )}
@@ -384,7 +384,7 @@ export default function MetricsView({ client, session }: MetricsViewProps) {
                             </th>
                             <th className="font-medium py-1.5 pr-2">Pass</th>
                             <th className="font-medium py-1.5 pr-2">Fail</th>
-                            <th className="font-medium py-1.5 pr-2">Flagged</th>
+                            <th className="font-medium py-1.5 pr-2">Needs review</th>
                             <th className="font-medium py-1.5 pr-2">N/A</th>
                             <th className="font-medium py-1.5 pr-2">
                               Pass rate

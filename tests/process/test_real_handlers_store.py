@@ -101,7 +101,7 @@ def real_runtime(make_runtime, monkeypatch, tmp_path):
     return _real_runtime(make_runtime, monkeypatch, tmp_path)
 
 
-def _real_runtime(make_runtime, monkeypatch, tmp_path, script=SCRIPT, name="real", **overrides):
+def _real_runtime(make_runtime, monkeypatch, tmp_path, script=SCRIPT, name="real", legacy_signals=True, **overrides):
     monkeypatch.setenv("CALL1_BACKEND", "mlx")
     monkeypatch.setenv("CALL1_SENTIMENT_MODELS", "1")
     root = tmp_path / f"models-{name}"
@@ -123,7 +123,18 @@ def _real_runtime(make_runtime, monkeypatch, tmp_path, script=SCRIPT, name="real
                         lambda wav_path, model_path: [{"start": i * 6.0, "end": i * 6.0 + 5.5, "speaker": i % 2} for i in range(len(script))])
     llm = ScriptedLlm()
     monkeypatch.setattr("call1.question_models.generate_text", llm)
+    # This harness covers historical all-Gemma/v1 artifacts, with no live endpoint.
+    # Default cascade routing is exercised by test_system_one and the real demo sample.
+    from call1.process.catalog import seeded_catalog
+    def offline_gemma_catalog(**kwargs):
+        return seeded_catalog(**{**kwargs, "system_one_url": None})
+    monkeypatch.setattr("call1.process.runtime.seeded_catalog", offline_gemma_catalog)
     runtime = make_runtime(name, handlers="real", **overrides)
+    if legacy_signals:
+        from call1.store import audit, db
+        from call1.store.results import signal_store
+        with runtime.client.http.app.state.store.connection() as conn, db.transaction(conn):
+            signal_store.set_pipeline(conn, "v1", actor=audit.installer_actor("legacy-model-test"))
     runtime.test_llm = llm  # type: ignore[attr-defined]
     return runtime
 
@@ -237,7 +248,7 @@ def test_a_qa_prompt_over_the_context_budget_is_flagged_and_the_scorecard_still_
     scripted = runtime.test_llm
 
     def overflowing(model, system, prompt, allow_external=False, response_schema=None, schema_name="answer", *args, **kwargs):
-        if schema_name == "qa_answer":
+        if schema_name in ("qa_answer", "qa_evidence"):
             raise RuntimeError("Input exceeds the appliance context budget; split into smaller chunks.")
         return scripted(model, system, prompt, allow_external, response_schema, schema_name, *args, **kwargs)
 
@@ -255,3 +266,37 @@ def test_a_qa_prompt_over_the_context_budget_is_flagged_and_the_scorecard_still_
     assert reg["status"] == "FLAGGED" and "context budget" in reg["reasoning"] and evaluation["requires_human_review"] is True
     attempts = reg["model_attempts"]
     assert attempts and attempts[0]["error_code"] == "context_limit_exceeded" and attempts[0]["trigger"] == "provider_error"
+
+
+@FFMPEG
+def test_qa_recovers_from_provider_overflow_and_publishes_grounded_section_judgments(real_runtime, store_http, session, monkeypatch):
+    runtime = real_runtime
+    scripted = runtime.test_llm
+    sections = []
+
+    def recovering(model, system, prompt, allow_external=False, response_schema=None, schema_name="answer", *args, **kwargs):
+        if schema_name == "qa_evidence":
+            data = json.loads(prompt)
+            rows = data["transcript_section"]
+            sections.extend(rows)
+            quote = next(row for row in rows if row[1] == "AGENT")
+            return json.dumps({"notes": "The opening supplies the requested evidence.", "complete": True,
+                               "evidence": [{"turn_id": quote[0], "quote": quote[2]}]}), {}
+        if schema_name == "qa_answer":
+            data = json.loads(prompt.split("Evaluate this input data:\n", 1)[1])
+            if "reports" not in data:
+                raise RuntimeError("Input exceeds the appliance context budget; split into smaller chunks.")
+            quote = data["reports"][0]["evidence"][0]["quote"]
+            return json.dumps({"assessment": "Source evidence establishes the behavior.", "verdict": "pass", "quote": quote}), {}
+        return scripted(model, system, prompt, allow_external, response_schema, schema_name, *args, **kwargs)
+
+    monkeypatch.setattr("call1.question_models.generate_text", recovering)
+    worker = runtime.connect()
+    result = runtime.ingestor.ingest_file(SAMPLE, agent_id="agent-9")
+    worker.drain()
+    assert all(j.status is JobStatus.SUCCEEDED for j in runtime.client.list_jobs(conversation_id=result.conversation_id))
+    evaluation = store_http.get(f"{V}/calls/{result.call_id}/evaluation", headers=session().read_headers).json()
+    reg = next(v for v in evaluation["verdicts"] if v["criterion_id"] == "REG-01")
+    assert reg["status"] == "PASS" and reg["quoted_evidence"] in SCRIPT[0][1]
+    assert {row[0] for row in sections} == set(range(len(SCRIPT)))
+    assert all(a["error_code"] is None for a in reg["model_attempts"])

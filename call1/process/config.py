@@ -16,6 +16,7 @@ writes the first four keys; everything else is optional:
 | ``primary_host`` | ``true`` | Offer primary-host (ML) jobs; switched off automatically when Store says the key is not primary |
 | ``rubric_id`` | ``call1_standard_v2`` | The published rubric new recordings are scored with |
 | ``model_defaults`` | catalog defaults | Purpose to catalog entry ID (``SET_MODEL_DEFAULTS``) |
+| ``system_one_url`` / ``system_one_model`` | local Ollama / ``laya`` | Default decision cascade; local Ollama endpoint, loopback only |
 | ``escalation_entry_id`` | none | Catalog entry for QA escalations when a criterion does not name one (none: no escalation, as before the split) |
 | ``slots`` | ``{"cpu_io": 4, "torch": 1, "mlx": 1, "outbound": 2}`` | Local resource slots; ``mlx`` is always 1 (the shared unified-memory slot) |
 | ``stages`` | all on | ``{"summary": true, "contact_signals": true, "embeddings": true}`` |
@@ -30,7 +31,7 @@ writes the first four keys; everything else is optional:
 Environment overrides: ``CALL1_PROCESS_CONFIG``, ``CALL1_PROCESS_HANDLERS``, ``CALL1_PROCESS_DATA``,
 ``CALL1_PROCESS_PORT``, ``CALL1_PROCESS_BIND``, ``CALL1_PROCESS_WORKER_ID``,
 ``CALL1_PROCESS_STORE_URL``, ``CALL1_PROCESS_MASK_MODEL_TEXT``, ``CALL1_PROCESS_TRAINER`` (``fake`` or
-``mlx_lm``: the on-device trainer).
+``mlx_lm``: the on-device trainer), ``CALL1_SYSTEM_ONE_URL`` and ``CALL1_SYSTEM_ONE_MODEL``.
 """
 
 from __future__ import annotations
@@ -119,6 +120,8 @@ class ProcessConfig:
     primary_host: bool = True
     rubric_id: str = DEFAULT_RUBRIC_ID
     model_defaults: Mapping[str, str] = field(default_factory=dict)
+    system_one_url: str = "http://127.0.0.1:11434"
+    system_one_model: str = "laya"
     escalation_entry_id: Optional[str] = None
     slots: SlotSizes = field(default_factory=SlotSizes)
     stages: Stages = field(default_factory=Stages)
@@ -136,6 +139,13 @@ class ProcessConfig:
         object.__setattr__(self, "data_dir", Path(self.data_dir).expanduser())
         if self.store_url is not None:
             object.__setattr__(self, "store_url", validate_store_url(self.store_url))
+        from .system_one import validate_model, validate_url
+
+        try:
+            object.__setattr__(self, "system_one_url", validate_url(self.system_one_url))
+            validate_model(self.system_one_model)
+        except ValueError as exc:
+            raise ConfigError(str(exc)) from None
         if self.bind_host not in LOOPBACK_HOSTS:
             raise ConfigError("Process serves its console on loopback only (bind 127.0.0.1)")
         if not 0 < int(self.port) < 65536:
@@ -240,6 +250,8 @@ class ProcessConfig:
             primary_host=bool(raw.get("primary_host", True)),
             rubric_id=raw.get("rubric_id") or DEFAULT_RUBRIC_ID,
             model_defaults=dict(defaults),
+            system_one_url=env.get("CALL1_SYSTEM_ONE_URL") or raw.get("system_one_url") or "http://127.0.0.1:11434",
+            system_one_model=env.get("CALL1_SYSTEM_ONE_MODEL") or raw.get("system_one_model") or "laya",
             escalation_entry_id=raw.get("escalation_entry_id") or None,
             slots=slots,
             stages=stages,

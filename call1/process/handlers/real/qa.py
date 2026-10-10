@@ -18,7 +18,9 @@ verification against exactly the (masked, when the route is masked) text the mod
   outcome, not an error; the core records usage ``validation_rejected``);
 * a provider failure: ``HandlerError(provider_error)`` with the attempt's ``prompt_input``; the core
   retries, and on the final attempt records a FLAGGED ``provider_error`` assessment;
-* a prompt over the model's context budget: a FLAGGED assessment at once (trigger
+* long transcripts use lossless compact rows, then complete section evidence review and bounded
+  whole-call synthesis when still oversized. Only an irreducible policy/turn context error
+  produces a FLAGGED assessment (trigger
   ``provider_error``, attempt ``error_code: context_limit_exceeded``), as the pre-split router
   recorded it. Retrying cannot help, and failing the job would dead-block the scorecard;
 * the policy, speaker-identity and speaker-scope gates FLAG without calling a model, as before the
@@ -51,7 +53,7 @@ from .convert import contract_verdict, legacy_criterion, legacy_rubric, legacy_t
 from .llm import LlmTransport, check_route, template_version
 from .masking import enrichment, mask, route_masked, sensitive_values
 
-ADAPTER_VERSION = "1"
+ADAPTER_VERSION = "2"
 QA_TEMPLATE_ID = "call1.qa.semantic_judgement"
 GUIDANCE_FIELDS = ("pass_when", "fail_when", "not_applicable_when", "policy_context")
 CONTEXT_OVERFLOW_REASONING = ("The call transcript is longer than the model's context budget, so the model could not assess this "
@@ -119,7 +121,7 @@ def qa_inputs(job: HandlerJob, *, masked: bool):
     return legacy, check, transcript, values
 
 
-def qa_prompt(job: HandlerJob, *, masked: bool):
+def qa_prompt(job: HandlerJob, *, masked: bool, compact: Optional[bool] = None):
     """(system, user, masked transcript, check): the exact messages ``RealQaAssessment`` sends for
     the job's semantic criterion (``QA_SYSTEM`` and ``RubricEvaluator._semantic_prompt``). On-device
     training rebuilds its QA examples with this, always ``masked=True``, so their digest equals the
@@ -128,7 +130,16 @@ def qa_prompt(job: HandlerJob, *, masked: bool):
     from call1.question_models import SYSTEM
 
     _legacy, check, transcript, _values = qa_inputs(job, masked=masked)
-    return SYSTEM, RubricEvaluator()._semantic_prompt(check, transcript.turns), transcript, check
+    from .qa_context import choose_prompt, compact_prompt
+
+    original = RubricEvaluator()._semantic_prompt(check, transcript.turns)
+    # Training replay has no live model selection. Rebuild the recorded format rather
+    # than using today's model budget to change yesterday's training messages.
+    if compact is not None or job.catalog_entry is None:
+        prompt = compact_prompt(check, transcript) if compact else original
+    else:
+        prompt, _compact = choose_prompt(job, SYSTEM, original, check, transcript)
+    return SYSTEM, prompt, transcript, check
 
 
 class _Failure(Exception):
@@ -153,20 +164,40 @@ class RealQaAssessment(Handler):
         legacy, check, transcript, _values = qa_inputs(job, masked=route_masked(job))
 
         transport = LlmTransport(job)
-        state: Dict[str, object] = {"raw": None, "failure": None, "started": None, "cancelled": False}
+        state: Dict[str, object] = {"raw": None, "failure": None, "started": None, "cancelled": False, "compact": False, "sectioned": False}
 
         def backend(prompt: str) -> str:
             state["started"] = time.monotonic()
             try:
-                answer = transport.generate(SYSTEM, prompt, response_schema=QA_SCHEMA, schema_name="qa_answer")
+                from .qa_context import Budget, choose_prompt, sectioned_answer
+
+                budget = Budget(job)
+                planned, compact = choose_prompt(job, SYSTEM, prompt, check, transcript, budget)
+                state["compact"] = compact
+                if budget.fits(SYSTEM, planned):
+                    try:
+                        raw = transport.generate(SYSTEM, planned, response_schema=QA_SCHEMA, schema_name="qa_answer").raw
+                    except HandlerError as exc:
+                        if exc.code is not JobErrorCode.CONTEXT_LIMIT_EXCEEDED:
+                            raise
+                        state["sectioned"] = True
+                        raw = sectioned_answer(transport, check, transcript, budget)
+                else:
+                    state["sectioned"] = True
+                    raw = sectioned_answer(transport, check, transcript, budget)
             except JobCancelled:
                 state["cancelled"] = True
                 raise _Failure() from None
             except HandlerError as exc:
-                state["failure"] = exc
-                raise _Failure() from None
-            state["raw"] = answer.raw
-            return answer.raw
+                if exc.code is JobErrorCode.VALIDATION_REJECTED:
+                    import json
+                    raw = json.dumps({"assessment": "Section evidence could not be verified. Human review is required.",
+                                      "verdict": "needs_review", "quote": ""})
+                else:
+                    state["failure"] = exc
+                    raise _Failure() from None
+            state["raw"] = raw
+            return raw
 
         job.check_cancelled()
         evaluator = RubricEvaluator(model_backend=backend)
@@ -174,7 +205,12 @@ class RealQaAssessment(Handler):
         if state["cancelled"]:
             raise JobCancelled()
         version = template_version(SYSTEM, QA_SCHEMA)
-        prompt_input = transport.prompt_input(QA_TEMPLATE_ID, version)
+        template_id = QA_TEMPLATE_ID
+        if state["compact"] or state["sectioned"]:
+            from .qa_context import VERSION
+            version = template_version(SYSTEM, QA_SCHEMA, VERSION)
+            template_id += ".sectioned" if state["sectioned"] else ".compact"
+        prompt_input = transport.prompt_input(template_id, version)
         failure: Optional[HandlerError] = state["failure"]  # type: ignore[assignment]
         if failure is not None and failure.code is JobErrorCode.CONTEXT_LIMIT_EXCEEDED:
             return self._context_overflow(job, criterion, transport, prompt_input)

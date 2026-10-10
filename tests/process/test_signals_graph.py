@@ -127,7 +127,7 @@ def _without(purpose: ModelPurpose) -> ProcessCatalog:
 
 def test_v2_needs_both_classifier_entries_else_v1_with_a_note_or_a_configuration_error(tmp_path):
     for catalog in (_without(ModelPurpose.SIGNAL_CATEGORY), _without(ModelPurpose.SIGNAL_SUBCATEGORY)):
-        _, by_ref = ingest(signals_input(), catalog=catalog)
+        _, by_ref = ingest(signals_input(settings=SignalSettings(pipeline="v2", v1_fallback=True)), catalog=catalog)
         assert {"cs-lifecycle", "cs-resolution", "cs-merge"} <= set(by_ref) and "cs-categorize" not in by_ref
         assert by_ref["cs-merge"].parameters.extra["pipeline_note"] == V2_UNAVAILABLE_NOTE
     # v1 fallback off: only a merge that records configuration_error
@@ -243,3 +243,20 @@ def test_v2_without_pii_findings_is_refused():
     with pytest.raises(PlanError):
         planner.add_contact_signals(new_jobs("k.x"), QaSources(transcript=Src.pinned(_art("transcript", "art_tr"))), 60.0,
                                     signals=signals_input())
+
+
+def test_default_cascade_does_not_silently_fall_back_to_legacy_when_laya_is_missing():
+    from call1.process.system_one import ENTRY_ID
+    catalog = seeded_catalog(mode="fake")
+    catalog.defaults[ModelPurpose.SIGNAL_CATEGORY] = ENTRY_ID  # absent on this host
+    with pytest.raises(PlanError, match="cannot fall back to legacy"):
+        ingest(signals_input(cancel_taxonomy(), SignalSettings(pipeline="v2", v1_fallback=True)), catalog=catalog)
+
+
+@pytest.mark.parametrize("legacy", [None, "v1", "shadow"])
+def test_default_cascade_cannot_execute_an_older_pipeline(legacy):
+    catalog = seeded_catalog(mode="fake")
+    catalog.defaults[ModelPurpose.SIGNAL_CATEGORY] = "laya-system-one"
+    inputs = None if legacy is None else signals_input(settings=SignalSettings(pipeline=legacy))
+    with pytest.raises(PlanError, match="requires a v2 taxonomy snapshot"):
+        ingest(inputs, catalog=catalog)

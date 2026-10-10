@@ -903,7 +903,7 @@ function ThresholdInput({ label, value, readOnly, onChange }: { label: string; v
       label={label}
       hint={
         <span>
-          {value === null ? <span className="font-medium text-fg-muted">Engine default. </span> : null}A calibrated model score from 0.05 to 0.95, not a share of calls. Leave empty for the engine default; tune it with the test.
+          {value === null ? <span className="font-medium text-fg-muted">Engine default. </span> : null}A decision score from 0.05 to 0.95, not an accuracy probability or a share of calls. Leave empty for the engine default; tune it with the test.
           {invalid && <span className="block text-primer-redFg">Use a number from 0.05 to 0.95.</span>}
         </span>
       }

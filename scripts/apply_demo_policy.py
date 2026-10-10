@@ -9,7 +9,8 @@ A demo started before that, or one whose ``demo-setup.json`` marker was removed,
 
 It signs in with demo mode's admin persona (``/demo/sign-in``, localhost only), publishes the next
 ``call1_standard_v2`` version with the retail verification and disclosure policy for SEC-01 and
-COMP-01, and creates the ``stock-check`` alert rule (intent > Check stock / availability) and the
+COMP-01, makes REG-01 recording disclosure non-critical with weight five, and creates the
+``stock-check`` alert rule (intent > Check stock / availability) and the
 ``signal-stock-check`` SIGNAL queue rule. Every step is idempotent. Existing scorecards keep the
 version they were scored with until ``--reanalyze`` asks Process to rescore each call's QA with the
 current version (one ``qa`` reanalysis request per call); new signals on those calls then reach the

@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from call1.contracts.signals import SignalTaxonomySave
 from call1.demo_setup import DEMO_ALERT_RULE, DEMO_QUEUE_RULE, DEMO_RUBRIC_ID, DemoSetupError, apply_demo_setup
 from call1.models.schemas import RubricCriterion
-from call1.pipeline.contextual_rubrics import RETAIL_DEMO_POLICY, with_policy
+from call1.pipeline.contextual_rubrics import RETAIL_DEMO_POLICY, with_demo_recording_weight, with_policy
 from call1.pipeline.evaluator import DEFAULT_RUBRIC, RubricEvaluator
 from call1.store import audit
 from call1.store.app import create_app
@@ -83,6 +83,8 @@ def test_apply_demo_setup_publishes_the_policy_and_creates_the_alert_and_queue_r
         checks = {c["criterion_id"]: c["check"] for c in rubric["definition"]["criteria"]}
         assert checks["SEC-01"]["policy_context"] == RETAIL_DEMO_POLICY["SEC-01"]
         assert checks["COMP-01"]["policy_context"] == RETAIL_DEMO_POLICY["COMP-01"]
+        recording = next(c for c in rubric["definition"]["criteria"] if c["criterion_id"] == "REG-01")
+        assert recording["critical"] is False and recording["weight"] == 5.0
         rules = client.get(f"{V}/signals/alert-rules", headers=headers).json()["items"]
         assert [(r["rule_id"], r["node_active"], r["condition"]["subcategory_id"]) for r in rules] == [
             (DEMO_ALERT_RULE["rule_id"], True, "check_stock_availability")]
@@ -116,3 +118,36 @@ def test_apply_demo_setup_refuses_a_store_without_demo_mode(tmp_path, clock):
     with TestClient(app, base_url=STORE_BASE_URL) as client:
         with pytest.raises(DemoSetupError, match="not in demo mode"):
             apply_demo_setup(client, say=lambda _: None)
+
+
+def test_recording_failure_alone_no_longer_fails_an_otherwise_passing_demo_call():
+    from call1.contracts.contents import VerdictStatus, VerdictView
+    from call1.contracts.rubrics import RubricDefinition
+    from call1.process.handlers.code import score
+
+    original = DEFAULT_RUBRIC.model_dump(mode="json")
+    definition, changed = with_demo_recording_weight(original)
+    assert changed
+    assert next(c for c in original["criteria"] if c["criterion_id"] == "REG-01")["critical"] is True
+    again, changed = with_demo_recording_weight(definition)
+    assert again == definition and not changed
+    rubric = RubricDefinition.model_validate(definition)
+    verdicts = {c.criterion_id: VerdictView(criterion_id=c.criterion_id, criterion_name=c.name,
+                status=VerdictStatus.FAIL if c.criterion_id == "REG-01" else VerdictStatus.PASS,
+                confidence=0.9, reasoning="Test grounded assessment") for c in rubric.criteria}
+    _, overall, passed, critical, review, reasons = score(rubric.criteria, verdicts, rubric.pass_threshold)
+    assert overall == 93.8 and passed and not critical and not review and not reasons
+
+    # A product-information call may have only closing and disclosure applicable.
+    public_verdicts = {key: value.model_copy(update={"status": VerdictStatus.NOT_APPLICABLE})
+                       if key in ("SEC-01", "COMP-01") else value for key, value in verdicts.items()}
+    public_score = score(rubric.criteria, public_verdicts, rubric.pass_threshold)
+    assert public_score[1] == 80.0 and public_score[2] and not public_score[3]
+
+    # Verification is still critical; uncertainty still prompts a human review.
+    verdicts["SEC-01"] = verdicts["SEC-01"].model_copy(update={"status": VerdictStatus.FAIL})
+    assert score(rubric.criteria, verdicts, rubric.pass_threshold)[3] is True
+    verdicts["SEC-01"] = verdicts["SEC-01"].model_copy(update={"status": VerdictStatus.PASS})
+    verdicts["REG-01"] = verdicts["REG-01"].model_copy(update={"status": VerdictStatus.FLAGGED})
+    result = score(rubric.criteria, verdicts, rubric.pass_threshold)
+    assert not result[2] and not result[3] and result[4]

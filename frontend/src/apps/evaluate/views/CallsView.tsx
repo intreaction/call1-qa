@@ -291,7 +291,7 @@ function CallRow({ call: c, taxonomy, rules }: { call: CallListItem; taxonomy: S
             {badge.label}
           </StatusPill>
           {badge.score !== null && (
-            <span className="tabular-nums text-fg" aria-label={`Score ${formatScore(badge.score)} out of 100`}>
+            <span className="tabular-nums text-fg" aria-label={`${c.requires_human_review && !c.critical_failure ? 'Provisional score' : 'Score'} ${formatScore(badge.score)} out of 100`}>
               {formatScore(badge.score)}
             </span>
           )}

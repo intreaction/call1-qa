@@ -1,0 +1,121 @@
+{
+  "rubric_id": "call1_standard_v2",
+  "name": "Retail Service Experience",
+  "description": "Industry service rubric for product advice, stock checks, orders, delivery, returns, exchanges and cancellations. Evaluate observable service behaviors across the whole conversation. Company-specific compliance standards belong in separately configured checks.",
+  "category": "CUSTOMER_CARE",
+  "pass_threshold": 80,
+  "criteria": [
+    {
+      "criterion_id": "CARE-01",
+      "name": "Understand the customer's need",
+      "category": "DISCOVERY",
+      "description": "Did the agent understand what the customer needed, including relevant preferences or constraints?",
+      "weight": 15,
+      "critical": false,
+      "check": {
+        "check_type": "semantic_judgement",
+        "speaker": "AGENT",
+        "pass_when": "Only when the agent demonstrates understanding of the main purpose of the call and any material constraints. A relevant response can establish understanding; no script or extra questions are required. Recognizing a wish to cancel but pressuring the caller into continuing instead does not pass. An initial misunderstanding may pass if it is corrected.",
+        "fail_when": "Fail when the agent ignores or overrides a clearly stated main request or material constraint, persistently handles a different problem, or continues acting on an uncorrected misunderstanding. Credit understanding only if no such failure remains. Cite the response that conflicts with the request.",
+        "not_applicable_when": "Only when the recording explicitly shows that no service request was raised before an agreed transfer. An incomplete or unintelligible recording requires needs_review.",
+        "policy_context": "Assess the whole conversation, including later corrections and additional material requests. Judge the substance of the response, not accent, grammar, disfluencies or a mandatory script. Speech is evidence of what was said, not proof of external system activity. When evidence is ambiguous, use needs_review. An explicit fail condition anywhere in the call overrides an isolated positive example. For evidence copy a short contiguous phrase exactly from an AGENT turn, preferably a few words. Do not combine quotes, omit internal words, or quote a caller complaint as agent conduct. Use needs_review for unclear evidence."
+      }
+    },
+    {
+      "criterion_id": "CARE-02",
+      "name": "Explain the answer and options clearly",
+      "category": "COMMUNICATION",
+      "description": "Did the customer receive an understandable answer or explanation that supported their decision?",
+      "weight": 15,
+      "critical": false,
+      "check": {
+        "check_type": "semantic_judgement",
+        "speaker": "AGENT",
+        "pass_when": "Only when the main material questions receive understandable, internally consistent explanations or instructions. Relevant options and tradeoffs are clear when choices exist. An unrelated sales explanation does not answer a cancellation or return question. A later correction can repair an earlier confusing answer.",
+        "fail_when": "Fail when a main material question remains unanswered in a complete call, the agent leaves contradictory instructions or contradictory dispositions unreconciled, or continues a confusing explanation after the caller asks for clarification. Claiming a request is being completed then saying it will remain undone without agreement is a contradiction. Do not judge an unavailable product catalog or company policy as false.",
+        "not_applicable_when": "Only when an agreed immediate transfer explicitly leaves substantive advice to the receiving specialist. Unclear speech or a missing ending requires needs_review.",
+        "policy_context": "Evaluate communication visible in the transcript. Assess clarity and internal consistency, not legal compliance or factual accuracy against an unavailable product catalog. Do not require multiple options, a purchase, or a specific phrase. An explicit fail condition anywhere in the call overrides an isolated positive example. For evidence copy a short contiguous phrase exactly from an AGENT turn, preferably a few words. Do not combine quotes, omit internal words, or quote a caller complaint as agent conduct. Use needs_review for unclear evidence."
+      }
+    },
+    {
+      "criterion_id": "CARE-03",
+      "name": "Take ownership and move the request forward",
+      "category": "RESOLUTION",
+      "description": "Did the agent provide a useful response, take an appropriate action, or arrange a workable next step?",
+      "weight": 20,
+      "critical": false,
+      "check": {
+        "check_type": "semantic_judgement",
+        "speaker": "AGENT",
+        "pass_when": "The agent makes practical progress toward the customer's actual request: useful advice, a relevant action, or a workable next step. If the plan changes, the caller must agree to that alternative. State the requested action, actual agent action and evidence of agreement.",
+        "fail_when": "The agent blocks requested help or escalation without a workable alternative, or leaves the request unaddressed against the caller's explicit choice. Explaining a fee, contract or barrier alone is not progress. Keeping a service active when cancellation is still requested and no alternative is agreed is FAIL.",
+        "not_applicable_when": "Only when the caller explicitly withdraws all service requests before an agent can respond. A policy limitation, third-party dependency or unresolved outcome alone is not an exemption.",
+        "policy_context": "Examples for this criterion: customer wants to stop a service; agent announces it will stay active until they call again; customer never agrees = FAIL. Customer wants a replacement; agent explains delivery will take time and arranges it = PASS. Customer accepts a referral or self-service route = PASS. Do not infer agreement from silence or goodbye. Judge spoken progress, not external completion. Evaluate the whole call. A corrected mistake can pass; an unrepaired failure overrides a positive phrase. Quote a short exact contiguous phrase from an AGENT turn, including internal fillers. Do not use caller speech as agent evidence. If necessary evidence is unclear use needs_review."
+      }
+    },
+    {
+      "criterion_id": "CARE-04",
+      "name": "Set clear and realistic expectations",
+      "category": "EXPECTATIONS",
+      "description": "When something remains to happen, did the agent explain who does what and when or under what conditions?",
+      "weight": 15,
+      "critical": false,
+      "check": {
+        "check_type": "semantic_judgement",
+        "speaker": "AGENT",
+        "pass_when": "For material pending actions the agent explains the action, responsible party, and relevant timing, condition or way to check progress. Stating that timing is uncertain and describing how it will be confirmed can pass. Distinguish an estimate from a guarantee when a dependency is discussed.",
+        "fail_when": "Fail when a complete call leaves a main promised follow-up or handoff with no usable timing, trigger condition or progress-check route, or contains an unresolved guarantee contradicting an acknowledged dependency. An explicitly stated immediate action or a clearly stated triggering condition counts as timing; do not invent a missing deadline. Cite the promise or contradiction.",
+        "not_applicable_when": "The dialogue explicitly establishes an information-only answer or completed immediate task with no outstanding action, commitment or time-dependent decision. Do not infer this exemption from silence.",
+        "policy_context": "Assess the clarity of stated commitments, not whether the solution itself was good (ownership is a separate criterion). Explicit NOW is immediate timing; UNTIL YOU CONTACT US is a trigger condition. Conditions can satisfy timing without a calendar date. Do not invent brand deadlines or a missing payment deadline. Evaluate the whole call. A corrected mistake can pass; an unrepaired failure overrides a positive phrase. Quote a short exact contiguous phrase from an AGENT turn, including internal fillers. Do not use caller speech as agent evidence. If necessary evidence is unclear use needs_review."
+      }
+    },
+    {
+      "criterion_id": "CARE-05",
+      "name": "Show respect and appropriate empathy",
+      "category": "CUSTOMER_CARE",
+      "description": "Did the agent treat the customer respectfully and respond appropriately to their situation?",
+      "weight": 15,
+      "critical": false,
+      "check": {
+        "check_type": "semantic_judgement",
+        "speaker": "AGENT",
+        "pass_when": "Only when the agent remains respectful throughout the call and responds sensitively to clearly expressed distress or inconvenience when present. Neutral questions need courteous help, not scripted sympathy. Any clear mocking, belittling, accusation, dismissive argument or pressure after an explicit refusal means fail, even if the agent also uses a polite or empathetic phrase.",
+        "fail_when": "Fail if the agent mocks, insults, accuses or belittles the caller, trivializes distress, argues dismissively, or continues pressure after an explicit refusal. Acknowledgment of distress cannot cancel later disrespect. Quote the agent's offending words, not the caller's allegation that the agent was rude.",
+        "not_applicable_when": "Only when the recording explicitly contains no agent-customer interaction. Otherwise this standard applies to both routine and difficult conversations.",
+        "policy_context": "Assess expressed language and responses. Do not infer vocal tone, interruptions, emotional state or personality from text alone. Caller dissatisfaction by itself is not evidence of agent disrespect. Relevant optional recommendations are acceptable when the caller's preferences are respected. An explicit fail condition anywhere in the call overrides an isolated positive example. For evidence copy a short contiguous phrase exactly from an AGENT turn, preferably a few words. Do not combine quotes, omit internal words, or quote a caller complaint as agent conduct. Use needs_review for unclear evidence."
+      }
+    },
+    {
+      "criterion_id": "CARE-06",
+      "name": "Keep the conversation useful and focused",
+      "category": "CONVERSATION",
+      "description": "Did the agent manage the conversation so that the customer could get useful help without avoidable detours?",
+      "weight": 10,
+      "critical": false,
+      "check": {
+        "check_type": "semantic_judgement",
+        "speaker": "AGENT",
+        "pass_when": "Only when the agent keeps the discussion relevant and returns to the customer's task after brief rapport, misunderstanding or corrected errors. Long explanations and multiple questions can pass when useful. Sustained unrelated personal discussion or repeated unwanted sales pressure means fail; an earlier helpful answer cannot offset that behavior.",
+        "fail_when": "Fail if the agent initiates or sustains substantial unrelated personal discussion that displaces service, repeatedly resumes irrelevant sales pressure after the caller wants to proceed, or continues an avoidable conversational loop without resolving confusion. Judge the whole call, including later detours, not one helpful sentence or call length.",
+        "not_applicable_when": "Only when the recording explicitly contains no substantive agent conversation before a transfer. Insufficient transcript evidence requires needs_review.",
+        "policy_context": "No handle-time target, word-count limit or accent penalty applies. Caller-led topic changes, relevant product suggestions and friendly rapport are not failures by themselves. A corrected mistake is not automatically a failure. Assess the agent's response and the effect on the service conversation. An explicit fail condition anywhere in the call overrides an isolated positive example. For evidence copy a short contiguous phrase exactly from an AGENT turn, preferably a few words. Do not combine quotes, omit internal words, or quote a caller complaint as agent conduct. Use needs_review for unclear evidence."
+      }
+    },
+    {
+      "criterion_id": "CARE-07",
+      "name": "Leave the customer with a clear outcome",
+      "category": "CLOSING",
+      "description": "At the end, was the outcome or remaining next step clear and did the agent address any final need?",
+      "weight": 10,
+      "critical": false,
+      "check": {
+        "check_type": "semantic_judgement",
+        "speaker": "AGENT",
+        "pass_when": "The final exchange leaves the requested answer/action or an ACCEPTED next step clear, addresses final questions and ends courteously. This includes the final substantive answer/confirmation BEFORE the farewell, not just the last word. A clear outcome followed by a brief goodbye passes; no repeated recap or exact script is required.",
+        "fail_when": "A complete call ends with a main request blocked, a final question ignored, or an outcome contradicting the customer's unwithdrawn request without agreement. A clearly stated unwanted outcome is FAIL, even with a polite goodbye. Do not fail just because the agent does not repeat an already clear outcome.",
+        "not_applicable_when": "An explicitly observed unexpected disconnection prevents an agent-controlled close. A missing or uncertain recording ending requires needs_review instead of an invented failure or exemption.",
+        "policy_context": "Closing examples: customer requests cancellation; agent ends by saying the service stays active; there is no customer agreement to continue = FAIL. Customer requests replacement; agent confirms the replacement and the agreed delivery next step = PASS. Advice-only call: final question answered and customer confirms understanding = PASS. Identify the final requested outcome, final agent disposition, and whether the customer accepted it. A demand the customer call again is not evidence of acceptance. Evaluate the whole call. A corrected mistake can pass; an unrepaired failure overrides a positive phrase. Quote a short exact contiguous phrase from an AGENT turn, including internal fillers. Do not use caller speech as agent evidence. If necessary evidence is unclear use needs_review. Closing calibration: agent confirms an order and explains an email/pickup next step, caller says yes/thanks, agent says bye = PASS; do not look only at bye. A completed helpful answer can pass without repeated recap. Customer wants cancellation but agent ends by keeping the service active without agreement = FAIL. Quote the final substantive agent explanation, not a bare goodbye."
+      }
+    }
+  ]
+}

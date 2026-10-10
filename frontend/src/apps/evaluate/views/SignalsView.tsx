@@ -1,27 +1,24 @@
 // `#/signals` — Contact Signals v2 admin (docs/ContactSignalsV2.md §9 and §10.1): the taxonomy
 // editor (built-in and custom categories, subcategories, extraction fields), "Test on recent calls",
-// the activation dialog, alert rules, versions and the pipeline selector.
+// the activation dialog, alert rules, versions and the current pipeline status.
 //
 // Everyone with `read_calls` reads it; only `manage_signals` (admin, decision 22 Q1) edits. Store is
 // the authority for every rule shown here: the client-side checks only put the reason next to the
 // field before a save, and a refusal from Store is shown with the path it names.
 
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Bell, History, Radar } from 'lucide-react';
 import {
-  PIPELINE_LABEL,
   cloneTaxonomy,
   daysAgoIso,
   queryKeys,
   sameTaxonomy,
-  type SignalPipeline,
   type SignalTaxonomy,
   type SignalTaxonomyRecord,
 } from '../api';
-import { Button, EmptyState, ErrorNotice, Loading, PageHeader, SelectInput, StatusPill } from '../components/ui';
+import { EmptyState, ErrorNotice, Loading, PageHeader, StatusPill } from '../components/ui';
 import { href, type SignalsTab } from '../state/router';
-import { usePollChanges } from '../state/app';
 import { AlertRulesTab } from './signals/AlertRulesTab';
 import { TaxonomyTab } from './signals/TaxonomyTab';
 import { VersionsTab } from './signals/VersionsTab';
@@ -103,7 +100,7 @@ export default function SignalsView(props: SignalsViewProps) {
       {recordQuery.isLoading && <Loading label="Loading the signal taxonomy…" />}
       <ErrorNotice error={recordQuery.error} />
 
-      {record && <PipelineSelector {...props} record={record} />}
+      {record && <PipelineStatus />}
 
       <nav aria-label="Signals sections" className="flex flex-wrap gap-1 border-b border-border">
         {TABS.map(({ tab: t, label, icon: Icon }) => {
@@ -147,83 +144,11 @@ export default function SignalsView(props: SignalsViewProps) {
   );
 }
 
-/**
- * The pipeline selector (§10.1): admins choose which pipeline runs; shadow and v2
- * stay disabled until a Process host reports a qualified stage-1 classifier (`signal_category`) in
- * its catalog snapshot. Switching back to v1 is always allowed (§14 rollback).
- */
-function PipelineSelector({ client, session, record }: SignalsViewProps & { record: SignalTaxonomyRecord }) {
-  const qc = useQueryClient();
-  const pollNow = usePollChanges();
-  const canManage = session.can('manage_signals');
-  const pipeline = record.settings.pipeline;
-  const [choice, setChoice] = useState<SignalPipeline>(pipeline);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  useEffect(() => setChoice(pipeline), [pipeline]);
-
-  const catalogQuery = useQuery({
-    queryKey: queryKeys.catalogSnapshots,
-    queryFn: ({ signal }) => client.get('/store/v1/catalog-snapshots', { signal }),
-    enabled: canManage,
-    retry: false,
-  });
-  const qualified = (catalogQuery.data?.items ?? []).some((snap) =>
-    snap.entries.some((e) => e.status === 'available' && e.qualified_for.includes('signal_category')),
-  );
-
-  async function apply() {
-    setBusy(true);
-    setError(null);
-    try {
-      const next = await client.put('/store/v1/signals/settings', {
-        body: { settings: { ...record.settings, pipeline: choice }, expected_record_version: record.record_version },
-      });
-      qc.setQueryData(queryKeys.signalTaxonomy, next);
-      pollNow();
-    } catch (err) {
-      setError(err);
-      void qc.invalidateQueries({ queryKey: queryKeys.signalTaxonomy });
-    } finally {
-      setBusy(false);
-    }
-  }
-
+function PipelineStatus() {
   return (
-    <div data-testid="signals-pipeline-banner" className="space-y-2">
-      {canManage && (
-        <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label className="flex flex-col gap-1 text-xs font-medium text-fg-muted">
-            Pipeline
-            <SelectInput value={choice} onChange={(e) => setChoice(e.target.value as SignalPipeline)} className="w-56">
-              <option value="v1">{PIPELINE_LABEL.v1}</option>
-              <option value="shadow" disabled={!qualified}>
-                {PIPELINE_LABEL.shadow}
-                {!qualified ? ' — needs a qualified classifier' : ''}
-              </option>
-              <option value="v2" disabled={!qualified}>
-                {PIPELINE_LABEL.v2}
-                {!qualified ? ' — needs a qualified classifier' : ''}
-              </option>
-            </SelectInput>
-          </label>
-          <Button busy={busy} disabled={choice === pipeline} onClick={() => void apply()}>
-            Switch pipeline
-          </Button>
-          {!qualified && (
-            <p className="text-xs text-fg-muted basis-full">
-              {catalogQuery.isLoading
-                ? 'Checking the Process hosts for a qualified classifier…'
-                : catalogQuery.error
-                  ? 'Could not read the Process catalogs, so shadow and v2 stay off.'
-                  : 'Shadow and v2 stay off until a Process host reports a qualified stage-1 classifier (engine not installed).'}
-            </p>
-          )}
-          <div className="basis-full">
-            <ErrorNotice error={error} />
-          </div>
-        </div>
-      )}
+    <div data-testid="signals-pipeline-banner" className="rounded-lg border border-border bg-canvas-subtle p-3 text-sm">
+      <p className="font-medium">Semantic similarity → Laya → Gemma</p>
+      <p className="text-fg-muted mt-1">Semantic matches propose signals. Strong Laya decisions keep them; uncertain candidates go to Gemma for confirmation.</p>
     </div>
   );
 }

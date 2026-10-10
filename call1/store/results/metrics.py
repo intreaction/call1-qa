@@ -1,10 +1,16 @@
 """Metrics read models (aggregates only, never transcript content).
 
-Every metric counts each call once, at its current machine evaluation version, filtered by the
+Every metric counts each call once, at its current evaluation version with the latest matching
+reviewer overrides applied to scores and criterion outcomes, filtered by the
 call's ``created_at`` (``MetricsQuery.start`` inclusive, ``end`` exclusive) and optionally by the
 current evaluation's rubric. A call without a scorecard is ``calls_pending_analysis`` and never
 counts as failed, unless its work stopped without a result ('Needs attention'), which is counted in
 neither.
+
+Score averages, daily scores and call pass rates include only finalized evaluations. A confirmed
+critical failure remains a failed evaluation even while awaiting review. Other evaluations awaiting
+review are provisional and excluded from those denominators. Criterion pass rates count PASS and
+FAIL only; FLAGGED and NOT_APPLICABLE remain visible as separate counts.
 
 Review agreement compares the machine verdict of the current evaluation with the human outcome:
 a criterion the reviewer overrode (the newest override of that version) counts as an override; any
@@ -83,15 +89,18 @@ def executive(conn: StoreConnection, query: MetricsQuery) -> ExecutiveMetrics:
     with read_snapshot(conn):
         where, args = _window(query)
         row = conn.execute(
-            f"SELECT COUNT(*) AS audited, SUM(passed) AS passed, SUM(critical_failure) AS critical, SUM(requires_human_review) AS review, "
-            f"AVG(overall_score) AS avg_score, SUM(COALESCE(duration_seconds, 0)) AS seconds FROM results_calls c "
+            f"SELECT COUNT(*) AS audited, SUM(CASE WHEN requires_human_review = 0 OR critical_failure = 1 THEN passed END) AS passed, "
+            f"SUM(critical_failure) AS critical, SUM(requires_human_review) AS review, "
+            f"SUM(CASE WHEN requires_human_review = 0 OR critical_failure = 1 THEN 1 ELSE 0 END) AS finalized, "
+            f"AVG(CASE WHEN requires_human_review = 0 OR critical_failure = 1 THEN overall_score END) AS avg_score, "
+            f"SUM(COALESCE(duration_seconds, 0)) AS seconds FROM results_calls c "
             f"WHERE c.evaluation_version IS NOT NULL AND {where}", args).fetchone()
         pending = _pending_analysis(conn, query) if query.rubric_id is None else 0
         audited = int(row["audited"] or 0)
         return ExecutiveMetrics(
             total_audited_calls=audited,
             calls_pending_analysis=int(pending or 0),
-            pass_rate_pct=_pct(int(row["passed"] or 0), audited),
+            pass_rate_pct=_pct(int(row["passed"] or 0), int(row["finalized"] or 0)),
             critical_compliance_breaches=int(row["critical"] or 0),
             supervisor_escalations=int(row["review"] or 0),
             average_score=round(float(row["avg_score"] or 0.0), 1),
@@ -107,13 +116,15 @@ def rubric(conn: StoreConnection, rubric_id: str, query: MetricsQuery) -> Rubric
             raise not_found("Rubric", rubric_id=rubric_id)
         where, args = _window(MetricsQuery(rubric_id=rubric_id, start=query.start, end=query.end))
         calls = conn.execute(
-            f"SELECT call_id, evaluation_version, overall_score, passed, evaluated_at FROM results_calls c "
+            f"SELECT call_id, evaluation_version, overall_score, passed, requires_human_review, critical_failure, evaluated_at FROM results_calls c "
             f"WHERE c.evaluation_version IS NOT NULL AND {where}", args).fetchall()
         counts: Dict[str, Dict[str, int]] = {}
         names: Dict[str, Tuple[str, str]] = {c.criterion_id: (c.name, c.category) for c in current.definition.criteria}
         order: List[str] = [c.criterion_id for c in current.definition.criteria]
         for call in calls:
-            for v in conn.execute("SELECT criterion_id, criterion_name, status FROM results_verdicts WHERE call_id = ? AND evaluation_version = ?",
+            for v in conn.execute("SELECT v.criterion_id, v.criterion_name, COALESCE((SELECT o.status FROM results_verdict_overrides o "
+                                  "WHERE o.call_id = v.call_id AND o.evaluation_version = v.evaluation_version AND o.criterion_id = v.criterion_id "
+                                  "ORDER BY o.review_version DESC LIMIT 1), v.status) AS status FROM results_verdicts v WHERE v.call_id = ? AND v.evaluation_version = ?",
                                   (call["call_id"], call["evaluation_version"])).fetchall():
                 cid = v["criterion_id"]
                 if cid not in names:
@@ -128,10 +139,11 @@ def rubric(conn: StoreConnection, rubric_id: str, query: MetricsQuery) -> Rubric
             criteria.append(CriterionMetric(
                 criterion_id=cid, criterion_name=names[cid][0], category=names[cid][1],
                 counts=CriterionCounts(PASS=bucket["PASS"], FAIL=bucket["FAIL"], FLAGGED=bucket["FLAGGED"], NOT_APPLICABLE=bucket["NOT_APPLICABLE"],
-                                       total=total, pass_rate_pct=_pct(bucket["PASS"], total)),
+                                       total=total, pass_rate_pct=_pct(bucket["PASS"], bucket["PASS"] + bucket["FAIL"])),
             ))
         daily: Dict[str, List[float]] = {}
-        for call in calls:
+        finalized = [c for c in calls if not c['requires_human_review'] or c['critical_failure']]
+        for call in finalized:
             day = (call["evaluated_at"] or "")[:10]
             if day:
                 daily.setdefault(day, []).append(float(call["overall_score"] or 0.0))
@@ -141,8 +153,8 @@ def rubric(conn: StoreConnection, rubric_id: str, query: MetricsQuery) -> Rubric
             rubric_name=current.definition.name,
             rubric_version=None,
             total_calls_evaluated=total,
-            average_score=round(sum(float(c["overall_score"] or 0.0) for c in calls) / total, 1) if total else 0.0,
-            pass_rate_pct=_pct(sum(1 for c in calls if c["passed"]), total),
+            average_score=round(sum(float(c["overall_score"] or 0.0) for c in finalized) / len(finalized), 1) if finalized else 0.0,
+            pass_rate_pct=_pct(sum(1 for c in finalized if c["passed"]), len(finalized)),
             criteria=criteria,
             daily=[DailyMetric(date=d, evaluated=len(s), mean_score=round(sum(s) / len(s), 1)) for d, s in sorted(daily.items())],
             generated_at=conn.now(),
@@ -172,7 +184,7 @@ def review_agreement(conn: StoreConnection, query: MetricsQuery) -> ReviewAgreem
             reviewed_calls += 1 if reviewed else 0
             final: Dict[str, str] = {}
             for o in conn.execute("SELECT criterion_id, status FROM results_verdict_overrides WHERE call_id = ? AND evaluation_version = ? "
-                                  "ORDER BY created_at, id", (call_id, version)).fetchall():
+                                  "ORDER BY review_version", (call_id, version)).fetchall():
                 final[o["criterion_id"]] = o["status"]
             for v in conn.execute("SELECT criterion_id, criterion_name, status FROM results_verdicts WHERE call_id = ? AND evaluation_version = ?",
                                   (call_id, version)).fetchall():

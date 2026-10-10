@@ -546,18 +546,25 @@ class GraphPlanner:
 
     def add_contact_signals(self, jobs: _Jobs, sources: QaSources, audio_seconds: Optional[float], *,
                             signals: Optional[SignalsInput] = None) -> None:
-        """The contact-signals stage. v1 (today's two passes) unless ``signals`` selects v2 (section
-        8.1): v2 when this host has usable ``signal_category`` and ``signal_subcategory`` entries;
-        otherwise v1 labelled with ``pipeline_note`` when ``v1_fallback`` is set, else a merge that
-        records ``configuration_error``. ``shadow`` builds v1 (Store adds the compare companion).
-        The planner never substitutes one model for another within a purpose."""
+        """The default semantic/Laya/Gemma process requires a v2 taxonomy snapshot.
+
+        Its category and confirmation entries must be usable; no legacy execution or fallback
+        is allowed. Historical/fake catalogs retain their older v1/shadow graph behavior for
+        compatibility, without substituting a model within a purpose.
+        """
+        from .system_one import ENTRY_ID
+
         pipeline = signals.effective_pipeline if signals is not None else "v1"
+        if self.catalog.defaults.get(ModelPurpose.SIGNAL_CATEGORY) == ENTRY_ID and pipeline != "v2":
+            raise PlanError("The semantic/Laya/Gemma process requires a v2 taxonomy snapshot; legacy pipelines are read-only")
         if pipeline != "v2":
             self.add_signals_v1(jobs, sources, audio_seconds)
             return
         if self.signals_v2_available():
             self.add_signals_v2(jobs, sources, audio_seconds, signals)  # type: ignore[arg-type]
             return
+        if self.catalog.defaults.get(ModelPurpose.SIGNAL_CATEGORY) == ENTRY_ID:
+            raise PlanError("The default Contact Signals cascade needs qualified local Laya and Gemma entries; it cannot fall back to legacy analysis")
         if signals.require_v2:  # type: ignore[union-attr]
             raise PlanError("Contact Signals v2 needs a qualified signal classifier on this Process host")
         if signals.content.settings.v1_fallback:  # type: ignore[union-attr]

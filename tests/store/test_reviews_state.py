@@ -33,6 +33,47 @@ def test_two_reviewers_cannot_overwrite_each_other(fq, client, mint_session):
     assert missing.status_code == 404
 
 
+def test_reviewed_score_updates_list_and_metrics_preserving_machine_version(fq, client, reviewer_session):
+    rubric = client.get('/store/v1/rubrics/call1_standard_v2', headers=reviewer_session.read_headers).json()['definition']
+    criteria = rubric['criteria']
+    a, b = [c for c in criteria if not c['critical']][:2]
+    verdicts = [(c['criterion_id'], VerdictStatus.FLAGGED if c in (a, b) else VerdictStatus.PASS, 0.9) for c in criteria]
+    conv = fq.register()
+    fq.ingest_qa(conv, verdicts, overall_score=85, passed=False, requires_human_review=True)
+    path = f'/store/v1/calls/{conv.call_id}'
+    machine = client.get(path + '/evaluation', headers=reviewer_session.read_headers).json()
+    assert _override(client, reviewer_session, conv.call_id, a['criterion_id'], expected=0).status_code == 200
+    partial = client.get(path + '/review', headers=reviewer_session.read_headers).json()['reviewed_score']
+    assert partial['overall_score'] == 100 and partial['requires_human_review'] and not partial['passed']
+    assert _override(client, reviewer_session, conv.call_id, b['criterion_id'], expected=1).status_code == 200
+    final = client.get(path + '/review', headers=reviewer_session.read_headers).json()['reviewed_score']
+    assert final['overall_score'] == 100 and final['passed'] and not final['requires_human_review']
+    calls = client.get('/store/v1/calls', headers=reviewer_session.read_headers).json()['items']
+    assert calls[0]['overall_score'] == 100 and calls[0]['passed'] and not calls[0]['requires_human_review']
+    metrics = client.get('/store/v1/metrics/executive', headers=reviewer_session.read_headers).json()
+    assert metrics['average_score'] == 100 and metrics['pass_rate_pct'] == 100 and metrics['supervisor_escalations'] == 0
+    assert client.get(path + '/evaluation', headers=reviewer_session.read_headers).json() == machine
+    assert _override(client, reviewer_session, conv.call_id, a['criterion_id'], expected=2, status='FAIL').status_code == 200
+    final = client.get(path + '/review', headers=reviewer_session.read_headers).json()['reviewed_score']
+    expected = round(100 * (sum(c['weight'] for c in criteria) - a['weight']) / sum(c['weight'] for c in criteria), 1)
+    assert final['overall_score'] == expected
+    metrics = client.get('/store/v1/metrics/rubrics/call1_standard_v2', headers=reviewer_session.read_headers).json()
+    assert next(c for c in metrics['criteria'] if c['criterion_id'] == a['criterion_id'])['counts']['FAIL'] == 1
+    fq.ingest_qa(conv, [(c['criterion_id'], VerdictStatus.PASS, 0.9) for c in criteria], overall_score=90)
+    assert client.get(path + '/review', headers=reviewer_session.read_headers).json()['reviewed_score'] is None
+    assert client.get('/store/v1/calls', headers=reviewer_session.read_headers).json()['items'][0]['overall_score'] == 90
+
+
+def test_reviewed_critical_failure_cannot_pass(fq, client, reviewer_session):
+    rubric = client.get('/store/v1/rubrics/call1_standard_v2', headers=reviewer_session.read_headers).json()['definition']
+    critical = next(c for c in rubric['criteria'] if c['critical'])
+    conv = fq.register()
+    fq.ingest_qa(conv, [(c['criterion_id'], VerdictStatus.FLAGGED if c == critical else VerdictStatus.PASS, 0.9) for c in rubric['criteria']], requires_human_review=True)
+    assert _override(client, reviewer_session, conv.call_id, critical['criterion_id'], status='FAIL').status_code == 200
+    score = client.get(f'/store/v1/calls/{conv.call_id}/review', headers=reviewer_session.read_headers).json()['reviewed_score']
+    assert score['critical_failure'] and not score['passed']
+
+
 def test_stale_review_writes_are_rejected_after_a_new_machine_version(fq, client, reviewer_session, supervisor_session):
     conv = fq.register()
     fq.ingest_qa(conv, [("REG-01", VerdictStatus.FAIL, 0.9)])

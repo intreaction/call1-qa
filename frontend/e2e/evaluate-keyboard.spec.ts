@@ -43,8 +43,14 @@ test('keyboard only: navigate, open a call, override a verdict, toggle the theme
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('workbench-header').getByTestId('call-agent')).toHaveText(agent);
 
+  // Open the compact scorecard's full review using the keyboard.
+  const reviewButton = page.getByRole('button', { name: 'Review scorecard', exact: true });
+  await tabTo(page, reviewButton, { max: 300 });
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Review scorecard' })).toBeVisible();
+
   // Verdict override: Override opens the choices, Fail saves it.
-  await expect(page.getByText('Call Recording Disclosure', { exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog').getByText('Call Recording Disclosure', { exact: true })).toBeVisible();
   const override = page.getByRole('button', { name: 'Override' }).first();
   await tabTo(page, override, { max: 300 });
   expect(await hasVisibleFocus(override), 'Override shows a focus indicator').toBe(true);
@@ -53,6 +59,9 @@ test('keyboard only: navigate, open a call, override a verdict, toggle the theme
   await tabTo(page, fail);
   await page.keyboard.press('Space');
   await expect(page.getByText('Override saved.')).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(reviewButton).toBeFocused();
 
   // Theme toggle with Space.
   const toggle = page.getByRole('button', { name: /^Switch to (light|dark) theme$/ });
@@ -150,6 +159,11 @@ test('keyboard only: the Signals tree, hit chips and feedback controls are reach
   const chip = section.getByRole('button', { name: /^Caller objective › Other at \d+:\d\d: jump to the turn$/ });
   await tabTo(page, chip, { max: 300 });
   expect(await hasVisibleFocus(chip), 'a signal chip shows a focus indicator').toBe(true);
+
+  const details = section.getByRole('button', { name: /^Details for/ });
+  await tabTo(page, details);
+  await page.keyboard.press('Enter');
+  await expect(details).toHaveAttribute('aria-expanded', 'true');
 
   const confirm = section.getByRole('button', { name: 'Confirm', exact: true });
   await tabTo(page, confirm, { max: 30 });

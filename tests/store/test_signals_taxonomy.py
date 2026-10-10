@@ -47,7 +47,7 @@ def test_install_seeds_version_1_with_the_builtins_only(client, reviewer_session
     assert body["current"]["published_by_account_id"] is None
     assert body["current"]["taxonomy"] == builtin_signal_taxonomy().model_dump(mode="json")
     assert body["current"]["digest"] == taxonomy_digest(builtin_signal_taxonomy())
-    assert body["settings"] == {"pipeline": "v1", "v1_fallback": True, "fallback_extraction_entry_id": None, "detection": "model"}
+    assert body["settings"] == {"pipeline": "v2", "v1_fallback": False, "fallback_extraction_entry_id": None, "detection": "model"}
     # Process reads it too (jobs:write), to mint snapshots at ingest.
     assert client.get(f"{V}/signals/taxonomy", headers=service_key_headers).status_code == 200
 
@@ -150,7 +150,7 @@ def test_settings_share_the_record_version_and_are_audited(client, admin_session
     stale = client.put(f"{V}/signals/taxonomy", json=save_body(TAXONOMY, 1), headers=admin_session.headers)
     assert stale.status_code == 409
     [entry] = _audit(client, admin_session, "signal_settings_changed")
-    assert entry["details"]["old_pipeline"] == "v1" and entry["details"]["new_pipeline"] == "shadow"
+    assert entry["details"]["old_pipeline"] == "v2" and entry["details"]["new_pipeline"] == "shadow"
     assert [e["status"] for e in _changes(client, admin_session, "signal_taxonomy")] == ["settings"]
 
 
@@ -242,7 +242,7 @@ def test_apply_signals_seed_is_an_audited_admin_save_and_idempotent(tmp_path, mo
         assert record.current.version == 2 and record.settings.pipeline == "v2"
         assert record.current.digest == taxonomy_digest(SignalTaxonomySave.model_validate(json.loads(SEED.read_text())).taxonomy)
         actions = [r["action"] for r in conn.execute("SELECT action, actor_kind FROM audit_events ORDER BY sequence")]
-        assert actions == ["signal_taxonomy_saved", "signal_settings_changed"]
+        assert actions == ["signal_taxonomy_saved"]
     bad = tmp_path / "bad.json"
     bad.write_text(json.dumps({"taxonomy": {"categories": []}, "expected_record_version": 1}))
     assert store_cli.main(["apply-signals-seed", str(bad)]) == 2

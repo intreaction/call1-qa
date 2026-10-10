@@ -202,6 +202,8 @@ def carry_forwardable(previous: Optional[SignalStageProvenance], engine: Segment
     prompt, schema or adapter change would keep stale answers as current (section 7.5)."""
     if previous is None:
         return False
+    if getattr(engine, "requires_exact_revision", False) and previous.model_revision != engine.model_revision:
+        return False
     from call1.process.training.registry import lora_suffix
 
     # An answer from another on-device adapter (or from the base, when an adapter now answers) is
@@ -271,7 +273,8 @@ def run_categorize(job: HandlerJob, engine: Optional[SegmentClassifier], *, adap
     # Rules detection (1.4.0): the rules engine decides its categories and wraps the engine for the rest.
     from .signals_rules import maybe_rules_engine
 
-    engine = maybe_rules_engine(job, ctx, engine, device=device)
+    if not getattr(engine, "replaces_rules", False) or getattr(engine, "semantic_candidates", False):
+        engine = maybe_rules_engine(job, ctx, engine, device=device)
     if engine is None:
         raise HandlerError(JobErrorCode.MODEL_UNAVAILABLE, "no signal classifier for this entry")
     defaults = engine_defaults(engine.entry_id)
@@ -409,7 +412,9 @@ def run_subcategorize(job: HandlerJob, engine: SegmentClassifier, *, adapter_ver
         decision, sub_id, confidence = decide_subcategory(probabilities, category, subcategory_threshold=tau, reject_threshold=defaults.reject)  # type: ignore[arg-type]
         decisions[row.key] = SpanSubcategoryDecision(span_key=row.key, stage2_digest=stage2_digest(category), probabilities=probabilities,  # type: ignore[arg-type]
                                                      decision=decision, subcategory_id=sub_id, confidence=round(1 - probabilities.get(SIGNAL_NOT_OPTION, 0.0), 6),
-                                                     factors=list(DEFAULT_STAGE2_FACTORS), truncated=row.truncated, status="decided",
+                                                     factors=[f for f in DEFAULT_STAGE2_FACTORS if not (f == "next" and row.key.startswith("intent.")
+                                                                                                      and getattr(engine, "objective_no_next", False))],
+                                                     truncated=row.truncated, status="decided",
                                                      checked=row.key in checked)
     ordered = [decisions[s.span_key] for s in categories.spans if s.span_key in decisions]
     return SignalSubcategoriesContent(

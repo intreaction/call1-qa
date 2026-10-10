@@ -20,7 +20,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { Flag, MapPin, Quote, X } from 'lucide-react';
-import { COUNT, STAGE_BUFFER_H, computeEnvelope, createScene, disposeScene, syncPalette, type Scene3 } from './threadWaveformGl';
+import { COUNT, STAGE_BUFFER_H, computeEnvelope, createScene, disposeScene, syncPalette, speakerTimeline, type Scene3 } from './threadWaveformGl';
 
 export interface WaveformTurn {
   id: number;
@@ -461,6 +461,9 @@ export default function ThreadWaveform({
     engine.duration = 0;
     engine.envelope.fill(0);
     engine.gl.texture.needsUpdate = true;
+    engine.gl.speakers.image.data = new Uint8Array(COUNT * 4);
+    engine.gl.speakers.needsUpdate = true;
+    setChannels(0);
     setLoadState('loading');
     setLoadError('');
     setSilentRuns([]);
@@ -492,16 +495,15 @@ export default function ThreadWaveform({
     return () => controller.abort();
   }, [sourceKey, glState]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Speaker roles follow the transcript, which may arrive after the audio.
+  // Recolor when timestamps/roles arrive or are corrected, without decoding the audio again.
   const mapping = channelInfo(turns, channels);
   useEffect(() => {
-    const gl = engineRef.current?.gl;
-    if (!gl) return;
-    gl.layers.forEach((mesh, ch) => {
-      (mesh.material as THREE.ShaderMaterial).uniforms.uRole.value = mapping.roles[ch];
-    });
-    requestDraw(engineRef.current!);
-  }, [mapping.roles[0], mapping.roles[1]]); // eslint-disable-line react-hooks/exhaustive-deps
+    const engine = engineRef.current;
+    if (!engine?.gl) return;
+    engine.gl.speakers.image.data = speakerTimeline(turns, engine.duration, channels);
+    engine.gl.speakers.needsUpdate = true;
+    requestDraw(engine);
+  }, [turns, channels, loadState, sourceKey, glState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- interaction (ported) ---
 
@@ -532,12 +534,13 @@ export default function ThreadWaveform({
     if (!engine || !d) return;
     const t = Math.max(0, Math.min(d, seconds));
     if (seek) onSeek(t);
-    const turn = turnsRef.current.find((tn) => t >= tn.start && t < tn.end);
+    const active = turnsRef.current.filter((tn) => t >= tn.start && t < tn.end);
+    const roles = [...new Set(active.map((tn) => SPEAKER_TEXT[tn.speaker] ?? tn.speaker))];
     const frac = t / d;
     const quiet = loadState === 'ready' && silentRuns.some(([a, b]) => frac >= a && frac < b);
     setInfo({
-      title: `${clock(t)} · ${turn ? (SPEAKER_TEXT[turn.speaker] ?? turn.speaker) : 'Between transcript turns'}`,
-      text: turn?.text || 'No transcript segment at this moment. Play to hear the recording here.',
+      title: `${clock(t)} · ${roles.length ? roles.join(' + ') + (roles.length > 1 ? ' · overlap' : '') : 'Between transcript turns'}`,
+      text: active.map((tn) => tn.text).filter(Boolean).join(' / ') || 'No transcript segment at this moment. Play to hear the recording here.',
       quiet: quiet || (loadState === 'ready' && envelopeAt(frac) < 0.002),
     });
     engine.clickTime = engine.reduced.matches ? -10 : engine.time;
@@ -644,16 +647,12 @@ export default function ThreadWaveform({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 border-b border-border-muted text-[11px] text-fg-muted">
         {mode === 'ready' && (
           <>
-            <span className="fabric-key">
-              <span className={`fabric-dot ${mapping.roles[0] ? 'caller' : ''}`} aria-hidden="true" />
-              {mapping.labels[0]}
+            <span className="fabric-key" title="Colors follow speaker timestamps. Overlap uses both ribbon colors; mono audio remains mixed.">
+              <span className="fabric-dot" aria-hidden="true" />
+              Agent
             </span>
-            {mapping.labels[1] && (
-              <span className="fabric-key">
-                <span className={`fabric-dot ${mapping.roles[1] ? 'caller' : ''}`} aria-hidden="true" />
-                {mapping.labels[1]}
-              </span>
-            )}
+            <span className="fabric-key"><span className="fabric-dot caller" aria-hidden="true" />Caller</span>
+            <span className="fabric-key"><span className="fabric-dot" style={{ background: '#7a8ca1' }} aria-hidden="true" />Unassigned / gaps</span>
           </>
         )}
         <span className="text-fg-subtle" data-testid="thread-waveform-status">

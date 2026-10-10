@@ -275,6 +275,7 @@ test.describe('Signals: the taxonomy editor on a demo-mode stack (section 10.1)'
     const card = admin.getByTestId('contact-signals');
     const hit = card.locator('[data-signal-hit^="intent."]').filter({ hasText: 'Cancel account' });
     await expect(hit).toBeVisible({ timeout: 30_000 });
+    await hit.getByRole('button', { name: /^Details for/ }).click();
     await expect(hit.getByText('reason: price', { exact: true })).toBeVisible();
     await expect(hit.getByTitle('An alert rule matches this signal')).toContainText('Caller objective › Cancel account');
   });
@@ -309,40 +310,13 @@ test.describe('Signals: the taxonomy editor on a demo-mode stack (section 10.1)'
     }).toPass({ timeout: 20_000 });
   });
 
-  test('cs8: the pipeline selector follows an admin switch without a status banner', async ({ browser, colorScheme }) => {
+  test('cs8: the current process has no legacy mode selector', async ({ browser, colorScheme }) => {
     const admin = await signInDemo(browser, stack, 'Admin', colorScheme);
     await admin.goto('/#/signals');
     const banner = admin.getByTestId('signals-pipeline-banner');
-    await expect(banner.getByRole('status')).toHaveCount(0);
-
-    const select = banner.getByRole('combobox');
-    const switchButton = banner.getByRole('button', { name: 'Switch pipeline' });
-    await expect(switchButton).toBeDisabled(); // nothing chosen yet
-    // Rolling back to v1 is always allowed (section 14).
-    await select.selectOption('v1');
-    await Promise.all([
-      admin.waitForResponse((response) => response.url().endsWith('/store/v1/signals/settings') && response.request().method() === 'PUT' && response.ok()),
-      switchButton.click(),
-    ]);
-    await expect(select).toHaveValue('v1');
-    await expect(switchButton).toBeDisabled();
-
-    // The fake classifier is a qualified stage-1 entry, so shadow and v2 are selectable again.
-    await expect(select.locator('option[value="shadow"]')).toBeEnabled();
-    await select.selectOption('shadow');
-    await Promise.all([
-      admin.waitForResponse((response) => response.url().endsWith('/store/v1/signals/settings') && response.request().method() === 'PUT' && response.ok()),
-      switchButton.click(),
-    ]);
-    await expect(select).toHaveValue('shadow');
-    await expect(switchButton).toBeDisabled();
-    await select.selectOption('v2');
-    await Promise.all([
-      admin.waitForResponse((response) => response.url().endsWith('/store/v1/signals/settings') && response.request().method() === 'PUT' && response.ok()),
-      switchButton.click(),
-    ]);
-    await expect(select).toHaveValue('v2');
-    await expect(switchButton).toBeDisabled();
+    await expect(banner).toContainText('Semantic similarity → Laya → Gemma');
+    await expect(banner.getByRole('combobox')).toHaveCount(0);
+    await expect(banner.getByRole('button')).toHaveCount(0);
   });
 });
 
@@ -403,6 +377,7 @@ test.describe('Signals: multi-segment signals in the Workbench (decision 25)', (
     });
 
     await reviewer.page.goto(`/#/calls/${receipt.call_id}`);
+
     const card = reviewer.page.getByTestId('contact-signals');
     const row = card.locator(`[data-signal-hit="${hitId}"]`);
     await expect(row).toBeVisible({ timeout: 30_000 });
@@ -416,6 +391,7 @@ test.describe('Signals: multi-segment signals in the Workbench (decision 25)', (
     await expect(row.getByText(partQuote)).toHaveCount(0); // collapsed until asked
 
     // Keyboard: the disclosure is a real button, reachable and operable without a pointer.
+    await row.getByRole('button', { name: /^Details for/ }).click();
     const toggle = row.getByRole('button', { name: 'Show 1 more segment' });
     await toggle.focus();
     await expect(toggle).toBeFocused();

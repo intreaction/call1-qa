@@ -43,7 +43,7 @@ import os
 from collections import OrderedDict
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Literal, Optional, Tuple
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
@@ -320,6 +320,10 @@ def create_app(runtime: ProcessRuntime, *, start_background: bool = True, loopba
                 "masking": runtime.masking.model_dump(mode="json")}
 
     # --- writes ------------------------------------------------------------------------------
+
+    @app.get(API + "/signals/first-pass")
+    def signal_first_pass() -> Dict[str, Any]:
+        return runtime.signal_first_pass()
 
     @app.post(API + "/jobs/{job_id}/retry")
     def retry(job_id: str, request: Request, body: Optional[RetryBody] = None) -> Dict[str, Any]:

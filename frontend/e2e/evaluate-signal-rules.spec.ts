@@ -84,13 +84,13 @@ test.describe('Signal rules: the recipe editor on the retail pack', () => {
     await stack?.close();
   });
 
-  test('sr1: a pack recipe reads in words — origin, engine, score, gate, call position and phrases', async ({ browser, colorScheme }) => {
+  test('sr1: a pack recipe reads in words — origin, mandatory cascade, score, gate, call position and phrases', async ({ browser, colorScheme }) => {
     const admin = await signInDemo(browser, stack, 'Admin', colorScheme);
     await openCategory(admin, 'issue', 'Reported issue');
     const r = recipe(admin);
     await expect(r.getByRole('heading', { name: "How it's detected" })).toBeVisible();
     await expect(r.getByTestId('signals-recipe-origin')).toContainText('From the Retail pack v1, tuned on 25 public calls');
-    await expect(r.getByRole('radio', { name: 'Rules + examples' })).toBeChecked();
+    await expect(r.getByTestId('signals-recipe-cascade')).toContainText('This process always applies.');
     await expect(r.getByLabel('Score needed', { exact: true })).toHaveValue('0.4');
     await expect(r.getByLabel('Must also pass', { exact: true })).toHaveValue('phrase');
     await expect(r.getByLabel('Where in the call', { exact: true })).toHaveValue('q1');
@@ -99,11 +99,11 @@ test.describe('Signal rules: the recipe editor on the retail pack', () => {
     await expect(lx.getByText('Phrases (9 of 24)', { exact: true })).toBeVisible();
     await expect(lx.getByRole('radio', { name: 'Patterns (regular expressions)' })).toBeChecked();
     await expect(lx.getByLabel('Phrase weight', { exact: true })).toHaveValue('0.5');
-    await expect(r.getByRole('checkbox', { name: /^Gemma double-check/ })).not.toBeChecked();
+    await expect(r.getByRole('checkbox', { name: /^Gemma double-check/ })).toHaveCount(0);
 
-    // caller_confirms_resolved is the one pack recipe with the Gemma check; friction's "either" gate.
+    // Historical check fields no longer expose confirmation switches; filters stay readable.
     await openCategory(admin, 'caller_confirms_resolved', 'Caller confirmed');
-    await expect(recipe(admin).getByRole('checkbox', { name: /^Gemma double-check/ })).toBeChecked();
+    await expect(recipe(admin).getByRole('checkbox', { name: /^Gemma double-check/ })).toHaveCount(0);
     await expect(recipe(admin).getByLabel('Where in the call', { exact: true })).toHaveValue('h2');
     await openCategory(admin, 'friction', 'Friction point');
     await expect(recipe(admin).getByLabel('Must also pass', { exact: true })).toHaveValue('phrase_or_similar');
@@ -197,7 +197,6 @@ test.describe('Signal rules: the recipe editor on the retail pack', () => {
     await r.getByLabel('Where in the call', { exact: true }).selectOption('custom');
     await r.getByLabel('Starts from', { exact: true }).fill('0.1');
     await r.getByLabel('Starts by', { exact: true }).fill('0.6');
-    await r.getByRole('checkbox', { name: /^Gemma double-check/ }).check();
     await saveAndDismiss(admin);
 
     // Reload: every part came back from Store.
@@ -215,23 +214,22 @@ test.describe('Signal rules: the recipe editor on the retail pack', () => {
     await expect(r2.getByLabel('Where in the call', { exact: true })).toHaveValue('custom');
     await expect(r2.getByLabel('Starts from', { exact: true })).toHaveValue('0.1');
     await expect(r2.getByLabel('Starts by', { exact: true })).toHaveValue('0.6');
-    await expect(r2.getByRole('checkbox', { name: /^Gemma double-check/ })).toBeChecked();
+    await expect(r2.getByRole('checkbox', { name: /^Gemma double-check/ })).toHaveCount(0);
     await expect(r2.getByTestId('signals-recipe-origin')).toContainText('Retail pack v1');
 
-    // Model engine keeps the recipe (engine: gemma) and says so.
-    await r2.getByRole('radio', { name: 'Model (Gemma)' }).check();
-    await expect(r2).toContainText("Its rules recipe is kept but not used.");
-    await expect(r2.getByLabel('Score needed', { exact: true })).toHaveCount(0);
-    await r2.getByRole('radio', { name: 'Rules + examples' }).check();
+    // The cascade cannot be replaced or its uncertainty confirmation disabled.
+    await expect(r2.getByRole('radio', { name: 'Model (Gemma)' })).toHaveCount(0);
+    await expect(r2.getByRole('radio', { name: 'Rules + examples' })).toHaveCount(0);
+    await expect(r2.getByTestId('signals-recipe-cascade')).toContainText('Gemma confirms uncertain candidates');
     await expect(r2.getByLabel('Score needed', { exact: true })).toHaveValue('0.42');
     await expect(saveBar(admin).getByText('Unsaved changes')).toHaveCount(0);
   });
 
-  test('sr4: categories control detection without a global switch', async ({ browser, colorScheme }) => {
+  test('sr4: candidate tuning cannot replace the mandatory cascade', async ({ browser, colorScheme }) => {
     const admin = await signInDemo(browser, stack, 'Admin', colorScheme);
     await openCategory(admin, 'fix_proposed', 'Proposed fix');
     await expect(detection(admin)).toHaveCount(0);
-    await expect(recipe(admin).getByRole('radio', { name: 'Rules + examples' })).toBeChecked();
+    await expect(recipe(admin).getByTestId('signals-recipe-cascade')).toContainText('This process always applies.');
     await expect(recipe(admin)).not.toContainText('saved but not used');
     await expect(editor(admin).getByRole('status').filter({ hasText: "Don't paste caller details" })).toHaveCount(0);
     const reviewer = await signInDemo(browser, stack, 'Reviewer', colorScheme);
@@ -275,24 +273,23 @@ test.describe('Signal rules: detection by rules on fake handlers, end to end', (
     // Caller objective: rules, a phrase must match, "question about", weight 0.5, score 0.4.
     await openCategory(admin, 'intent', 'Caller objective');
     let r = recipe(admin);
-    await expect(r.getByRole('radio', { name: 'Model (Gemma)' })).toBeChecked();
+    await expect(r.getByRole('radio', { name: 'Model (Gemma)' })).toHaveCount(0);
     await expect(r.getByTestId('signals-recipe-origin')).toHaveCount(0);
-    await r.getByRole('radio', { name: 'Rules + examples' }).check();
+    await r.getByRole('button', { name: 'Customize candidate detection' }).click();
     await expect(r.getByLabel('Score needed', { exact: true })).toHaveValue('0.375');
     await r.getByLabel('Score needed', { exact: true }).fill('0.4');
     await addPhrase(lexicon(admin), 'question about');
     await r.getByLabel('Must also pass', { exact: true }).selectOption('phrase');
     await lexicon(admin).getByLabel('Phrase weight', { exact: true }).fill('0.5');
 
-    // Caller confirmed: the same shape with the Gemma double-check.
+    // Legacy fake-handler fixture: the same candidate recipe for Caller confirmed.
     await openCategory(admin, 'caller_confirms_resolved', 'Caller confirmed');
     r = recipe(admin);
-    await r.getByRole('radio', { name: 'Rules + examples' }).check();
+    await r.getByRole('button', { name: 'Customize candidate detection' }).click();
     await r.getByLabel('Score needed', { exact: true }).fill('0.4');
     await addPhrase(lexicon(admin), 'makes sense');
     await r.getByLabel('Must also pass', { exact: true }).selectOption('phrase');
     await lexicon(admin).getByLabel('Phrase weight', { exact: true }).fill('0.5');
-    await r.getByRole('checkbox', { name: /^Gemma double-check/ }).check();
     await saveAndDismiss(admin);
 
     await admin.goto('/#/signals');
@@ -307,6 +304,7 @@ test.describe('Signal rules: detection by rules on fake handlers, end to end', (
     await expect(card).toHaveAttribute('data-pipeline', 'v2', { timeout: 30_000 });
     const intent = card.locator('[data-signal-hit^="intent."]').first();
     await expect(intent).toBeVisible({ timeout: 30_000 });
+    await intent.getByRole('button', { name: /^Details for/ }).click();
     const why = intent.getByTestId('signal-why');
     await expect(why).toHaveAttribute('data-source', 'rules');
     await expect(why).toContainText('Found by rules');
@@ -323,9 +321,9 @@ test.describe('Signal rules: detection by rules on fake handlers, end to end', (
     const gemmaHit = card.locator('[data-signal-hit]').filter({ has: reviewer.locator('[data-testid="signal-why"][data-source="gemma"]') });
     if (await gemmaHit.count()) await expect(gemmaHit.first().getByTestId('signal-why')).toContainText('Found by Gemma');
 
-    // The fake stage 2 may confirm or reject the checked category; a confirmed hit says so.
+    // Historical fake-handler results retain their rule provenance.
     const confirmed = card.locator('[data-signal-hit^="caller_confirms_resolved."]');
-    if (await confirmed.count()) await expect(confirmed.first().getByTestId('signal-why-checked')).toHaveText('Gemma double-checked ✓');
+    if (await confirmed.count()) await expect(confirmed.first().getByTestId('signal-why')).toContainText('Found by rules');
 
     // "Test on recent calls" counts the rules hits per category.
     await admin.goto('/#/signals/intent');
@@ -411,13 +409,15 @@ test.describe('Signal rules: the "Why" disclosure on Workbench hits', () => {
     });
 
     await reviewer.page.goto(`/#/calls/${receipt.call_id}`);
+
     const card = reviewer.page.getByTestId('contact-signals');
     const rulesRow = card.locator(`[data-signal-hit="${rulesId}"]`);
     await expect(rulesRow).toBeVisible({ timeout: 30_000 });
 
+    await rulesRow.getByRole('button', { name: /^Details for/ }).click();
     const why = rulesRow.getByTestId('signal-why');
     await expect(why).toHaveAttribute('data-source', 'rules');
-    await expect(why.getByTestId('signal-why-checked')).toHaveText('Gemma double-checked ✓');
+    await expect(why.getByTestId('signal-why-checked')).toHaveCount(0);
     await expect(why.getByTestId('signal-why-panel')).toHaveCount(0); // collapsed
 
     const toggle = why.getByRole('button', { name: 'Why' });
@@ -427,7 +427,7 @@ test.describe('Signal rules: the "Why" disclosure on Workbench hits', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     // The phrase text comes from the current taxonomy's recipe; the shared stack's has none, so it is numbered.
     await expect(why.getByTestId('signal-why-summary')).toHaveText(
-      /^Found by rules · score 0\.62 ≥ 0\.38 · similar examples 0\.55 · phrase( '.+'| 1) \(matched, \+0\.20\) · Gemma double-checked ✓$/,
+      /^Found by rules · score 0\.62 ≥ 0\.38 · similar examples 0\.55 · phrase( '.+'| 1) \(matched, \+0\.20\)$/,
     );
     await expect(why).toContainText('Category decided by rules · subcategory decided by Gemma');
     const outcomes = why.getByRole('list', { name: 'Rule outcomes' });

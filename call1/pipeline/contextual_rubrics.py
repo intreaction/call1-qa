@@ -94,3 +94,23 @@ def with_policy(definition: dict, policy: dict = RETAIL_DEMO_POLICY) -> tuple:
             check['policy_context'] = text
             changed = True
     return result, changed
+
+
+def with_demo_recording_weight(definition: dict) -> tuple:
+    """Keep disclosure visible without making it an automatic demo-call failure.
+
+    Five points also avoid the former score-only failure: with a threshold of
+    eighty, losing twenty-five points failed a call even with critical=False.
+    Other criteria and the actual evidence assessment remain unchanged.
+    """
+    import copy
+
+    result = copy.deepcopy(definition)
+    changed = False
+    for criterion in result.get('criteria') or []:
+        if criterion.get('criterion_id') != 'REG-01':
+            continue
+        if criterion.get('critical') is not False or criterion.get('weight') != 5.0:
+            criterion.update(critical=False, weight=5.0)
+            changed = True
+    return result, changed

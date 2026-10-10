@@ -189,7 +189,7 @@ change a scorecard.
   seven audit actions; and eight `ContractParameters` caps (`max_custom_signal_categories` 8,
   `max_active_subcategories` 12, `max_fields_per_path` 12, `max_option_gloss_chars` 40,
   `max_signal_alert_rules` 50, `signal_preview_max_calls` 10, `signal_backfill_max_calls` 500,
-  `max_extraction_spans_per_call` 24). Store's save validator reads the caps, so S0 can tighten one
+  `max_extraction_spans_per_call` 64, increased from 24 for longer calls). Store's save validator reads the caps, so S0 can tighten one
   by changing a parameter; the Pydantic bounds on the models are fixed outer ceilings.
 - **14 routes, all Stage 2:** `getSignalTaxonomy`, `listSignalTaxonomyVersions`,
   `getSignalTaxonomyVersion`, `saveSignalTaxonomy`, `saveSignalSettings`, `redactSignalTaxonomyText`,
@@ -936,6 +936,12 @@ attestation record is enough. No other route carries either. Usage rows for Pro1
   medians per catalog entry, route and hardware profile. It returns aggregates only.
 
 ## Reviews and expected versions
+
+`CallReviewState.reviewed_score` is an optional additive read model: the pinned rubric scored
+with the latest current-version override per criterion. It is absent when no matching overrides
+exist. Call-list scores and rubric metrics use the same projection. The immutable evaluation
+artifact remains the original machine assessment; reanalysis resets the projection and older
+decisions remain in history without affecting the new score.
 
 Machine results and human decisions are separate versioned records. `EvaluationView.version` is the
 machine version; `CallReviewState.review_version` is bumped by every human write. Each write

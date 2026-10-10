@@ -29,6 +29,7 @@ import {
   hitSpanEnd,
   hitSubcategoryName,
   isVersionConflict,
+  isSemanticDecision,
   partialStageTexts,
   queryKeys,
   resultStateDisplay,
@@ -98,7 +99,6 @@ export function ContactSignalsSection({
   const d = resultStateDisplay(state);
   const pill = (
     <>
-      {view && <StatusPill tone={view.pipeline === 'v2' ? 'blue' : 'neutral'}>{view.pipeline === 'v2' ? 'v2 signals' : 'v1 signals'}</StatusPill>}
       <StatusPill tone={d.tone} title={`${d.description}${group?.failure_code ? ` (${failureReason(group.failure_code)})` : group?.partial_reason ? ` — ${group.partial_reason}` : ''}`}>
         {state === 'stale' ? 'Refreshing' : d.label}
       </StatusPill>
@@ -162,7 +162,7 @@ export function ContactSignalsSection({
   }
 
   return (
-    <Card title="Contact signals" subtitle="Unscored: signals never change the score" right={pill}>
+    <Card title="Contact signals" subtitle="Topics, intent and alerts" className="[&>div]:p-3" right={pill}>
       <div data-testid="contact-signals" data-state={state} data-pipeline={view?.pipeline}>
         {body}
       </div>
@@ -229,16 +229,6 @@ function SignalsBody({
         </Notice>
       )}
       {view.pipeline_note && <Notice>{view.pipeline_note}</Notice>}
-      {view.alerts.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5" aria-label="Alerts on this call">
-          <span className="text-xs text-fg-muted">Alerts:</span>
-          {view.alerts.map((a) => (
-            <Chip key={a.rule_id} tone="yellow" icon={Bell}>
-              {a.name}
-            </Chip>
-          ))}
-        </div>
-      )}
       {view.pipeline === 'v1' && view.comparison_preview_id && session.can('manage_signals') && (
         <div className="space-y-2">
           <Button size="sm" icon={GitCompare} aria-expanded={compare} onClick={() => setCompare((c) => !c)}>
@@ -261,9 +251,10 @@ function SignalsBody({
         )
       ) : (
         <>
-          {view.pipeline === 'v2' && seg && (
-            <p className="text-xs text-fg-subtle">{segmentsText(seg)}</p>
-          )}
+          <div className="flex items-center justify-between gap-2 text-[11px] text-fg-muted" data-testid="signals-overview" title={seg ? segmentsText(seg) : undefined}>
+            <span>{view.signals.length} signal{view.signals.length === 1 ? '' : 's'} · {present.size} categor{present.size === 1 ? 'y' : 'ies'}</span>
+            <span title="Contact signals never change the QA score">Unscored</span>
+          </div>
           {filtering && (
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Show signals by category" data-testid="signals-filter">
               <span className="text-xs text-fg-muted">Show:</span>
@@ -338,6 +329,8 @@ function SignalRow({
   const subVerdictCurrent =
     feedback?.subcategory_verdict != null && feedback.subcategory_id === sig.subcategory_id && feedback.subcategory_digest === sig.subcategory_digest;
   const subVerdictDetached = feedback?.subcategory_verdict != null && !subVerdictCurrent;
+  const [expanded, setExpanded] = useState(false);
+  const detailsId = useId();
   const [correcting, setCorrecting] = useState(false);
   const [correction, setCorrection] = useState('');
   const [busy, setBusy] = useState(false);
@@ -393,159 +386,168 @@ function SignalRow({
       data-family={signalFamily(hitCategoryId(sig))}
       data-segments={hitSegmentCount(sig)}
     >
-      <button
-        type="button"
-        onClick={() => onJump(sig.turn_id, sig.start)}
-        aria-label={`${hitCategoryName(sig)}${sub ? ` › ${sub}` : ''} at ${clock(sig.start)}${segments ? `, across ${hitSegmentCount(sig)} segments` : ''}: jump to the turn`}
-        className="w-full text-left p-2.5 rounded-t-md hover:bg-canvas-inset transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primer-blue"
-      >
-        <span className="flex flex-wrap items-center gap-1.5 mb-1">
-          <Chip tone={fam.tone} title="Signal category">
-            {hitCategoryName(sig)}
-          </Chip>
-          {sub && (
-            <>
-              <span className="text-fg-subtle text-xs" aria-hidden="true">
-                ›
-              </span>
-              <Chip tone="neutral" title="Subcategory">
-                {sub}
-              </Chip>
-            </>
-          )}
-          {segments && (
-            <span data-testid="signal-segments">
-              <Chip tone="neutral" icon={Layers} title={`One signal: the same speaker, category and subcategory across ${hitSegmentCount(sig)} consecutive segments`}>
-                {segments}
-              </Chip>
-            </span>
-          )}
-          {chips.map(({ f, text }) => (
-            <Chip key={f.field_id} title={FIELD_STATUS_TEXT[f.status]}>
-              {text}
+      <div className="flex items-start">
+        <button
+          type="button"
+          onClick={() => onJump(sig.turn_id, sig.start)}
+          aria-label={`${hitCategoryName(sig)}${sub ? ` › ${sub}` : ''} at ${clock(sig.start)}${segments ? `, across ${hitSegmentCount(sig)} segments` : ''}: jump to the turn`}
+          className="flex-1 min-w-0 text-left p-2 rounded-md hover:bg-canvas-inset transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primer-blue"
+        >
+          <span className="flex flex-wrap items-center gap-1.5 mb-1">
+            <Chip tone={fam.tone} title="Signal category">
+              {hitCategoryName(sig)}
             </Chip>
-          ))}
-          {alerts.map((a) => (
-            <Chip key={a} tone="yellow" icon={Bell} title="An alert rule matches this signal">
-              {a}
-            </Chip>
-          ))}
-        </span>
-        <span className="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted mb-1">
-          <span className="tabular-nums">
-            {clock(sig.start)}–{clock(spanEnd)}
-          </span>
-          <span>{SPEAKER_LABEL[sig.speaker] ?? sig.speaker}</span>
-          {sig.quote_narrowed && <span className="text-primer-blueFg">narrowed</span>}
-        </span>
-        <span className="block text-fg-muted italic">{withheld && sig.quote === '[REDACTED]' ? '[REDACTED]' : <>&ldquo;{sig.quote}&rdquo;</>}</span>
-      </button>
-
-      {hitWhy(sig) && <WhyDisclosure why={hitWhy(sig)!} categoryId={hitCategoryId(sig)} taxonomy={taxonomy} />}
-
-      {parts.length > 0 && (
-        <div className="border-t border-border-muted px-2.5 py-1.5">
-          <button
-            type="button"
-            aria-expanded={showParts}
-            aria-controls={partsId}
-            onClick={() => setShowParts((v) => !v)}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primer-blueFg hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primer-blue"
-          >
-            {showParts ? <ChevronDown className="w-3 h-3" aria-hidden="true" /> : <ChevronRight className="w-3 h-3" aria-hidden="true" />}
-            {showParts ? `Hide the other segment${parts.length === 1 ? '' : 's'}` : `Show ${parts.length} more segment${parts.length === 1 ? '' : 's'}`}
-          </button>
-          {showParts && (
-            <ol id={partsId} className="mt-1.5 space-y-1" aria-label="Segments of this signal" data-testid="signal-parts">
-              {parts.map((part, i) => (
-                <li key={`${part.turn_id}-${part.block}`}>
-                  <button
-                    type="button"
-                    onClick={() => onJump(part.turn_id, part.start)}
-                    aria-label={`Segment ${i + 2} of ${parts.length + 1} at ${clock(part.start)}: jump to the turn`}
-                    className="w-full text-left rounded px-2 py-1 border-l-2 border-border hover:bg-canvas-inset transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primer-blue"
-                  >
-                    <span className="block text-[11px] text-fg-subtle tabular-nums">
-                      Segment {i + 2} · {clock(part.start)}–{clock(part.end)}
-                    </span>
-                    <span className="block text-fg-muted italic" data-part-quote>
-                      {withheld && part.quote === '[REDACTED]' ? '[REDACTED]' : <>&ldquo;{part.quote}&rdquo;</>}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
-      )}
-
-      {canJudge && (
-        <div className="border-t border-border-muted px-2.5 py-1.5 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="text-fg-muted">Category:</span>
-            <Button size="sm" variant={categoryVerdict === 'confirmed' ? 'primary' : 'ghost'} aria-pressed={categoryVerdict === 'confirmed'} busy={busy} onClick={() => void send({ category_verdict: 'confirmed' })}>
-              Confirm
-            </Button>
-            <Button size="sm" variant={categoryVerdict === 'dismissed' ? 'danger' : 'ghost'} aria-pressed={categoryVerdict === 'dismissed'} busy={busy} onClick={() => void send({ category_verdict: 'dismissed' })}>
-              Dismiss
-            </Button>
-            {categoryVerdict && <span className="text-fg-subtle">{categoryVerdict === 'confirmed' ? 'Confirmed' : 'Dismissed'}</span>}
-            {!categoryVerdict && earlierFeedback && (
-              <span className="text-fg-subtle" data-testid="signal-earlier-feedback">
-                A segment was {earlierFeedback.category_verdict === 'confirmed' ? 'confirmed' : 'dismissed'} before the segments merged
-              </span>
-            )}
-            {sig.subcategory_id && (
+            {sub && (
               <>
-                <span className="text-fg-muted ml-2">Subcategory:</span>
-                <Button
-                  size="sm"
-                  variant={subVerdictCurrent && feedback?.subcategory_verdict === 'confirmed' ? 'primary' : 'ghost'}
-                  aria-pressed={subVerdictCurrent && feedback?.subcategory_verdict === 'confirmed'}
-                  aria-label={`Confirm subcategory ${sub ?? ''}`.trim()}
-                  busy={busy}
-                  onClick={() => void send({ subcategory_verdict: 'confirmed', corrected_subcategory_id: null })}
-                >
-                  Confirm
-                </Button>
-                <Button
-                  size="sm"
-                  variant={subVerdictCurrent && feedback?.subcategory_verdict === 'corrected' ? 'primary' : 'ghost'}
-                  aria-expanded={correcting}
-                  disabled={busy || options.length === 0}
-                  onClick={() => setCorrecting((c) => !c)}
-                >
-                  Correct
-                </Button>
-                {subVerdictCurrent && feedback?.subcategory_verdict === 'corrected' && correctedName && <span className="text-fg-subtle">Corrected to {correctedName}</span>}
-                {subVerdictCurrent && feedback?.subcategory_verdict === 'confirmed' && <span className="text-fg-subtle">Confirmed</span>}
-                {subVerdictDetached && <span className="text-fg-subtle">Judged an earlier subcategory</span>}
+                <span className="text-fg-subtle text-xs" aria-hidden="true">
+                  ›
+                </span>
+                <Chip tone="neutral" title="Subcategory">
+                  {sub}
+                </Chip>
               </>
             )}
+            {segments && (
+              <span data-testid="signal-segments">
+                <Chip tone="neutral" icon={Layers} title={`One signal: the same speaker, category and subcategory across ${hitSegmentCount(sig)} consecutive segments`}>
+                  {segments}
+                </Chip>
+              </span>
+            )}
+            {alerts.map((a) => (
+              <Chip key={a} tone="yellow" icon={Bell} title="An alert rule matches this signal">
+                {a}
+              </Chip>
+            ))}
+          </span>
+          <span className="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted mb-1">
+            <span className="tabular-nums">
+              {clock(sig.start)}–{clock(spanEnd)}
+            </span>
+            <span>{SPEAKER_LABEL[sig.speaker] ?? sig.speaker}</span>
+            {sig.quote_narrowed && <span className="text-primer-blueFg">narrowed</span>}
+          </span>
+          <span className={`text-xs text-fg-muted italic ${expanded ? 'block' : 'line-clamp-1'}`}>{withheld && sig.quote === '[REDACTED]' ? '[REDACTED]' : <>&ldquo;{sig.quote}&rdquo;</>}</span>
+        </button>
+
+        <button type="button" aria-label={`Details for ${hitCategoryName(sig)}${sub ? ` › ${sub}` : ''}`} aria-expanded={expanded} aria-controls={detailsId} onClick={() => setExpanded(value => !value)} className="shrink-0 m-1.5 p-1.5 rounded-md text-fg-muted hover:bg-canvas-inset hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-primer-blue">
+          {expanded ? <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />}
+        </button>
+      </div>
+      <div id={detailsId} hidden={!expanded}>
+        {chips.length > 0 && <div className="flex flex-wrap gap-1.5 px-2.5 pb-2">
+            {chips.map(({ f, text }) => (
+              <Chip key={f.field_id} title={FIELD_STATUS_TEXT[f.status]}>
+                {text}
+              </Chip>
+            ))}
+        </div>}
+        {hitWhy(sig) && <WhyDisclosure why={hitWhy(sig)!} categoryId={hitCategoryId(sig)} taxonomy={taxonomy} />}
+
+        {parts.length > 0 && (
+          <div className="border-t border-border-muted px-2.5 py-1.5">
+            <button
+              type="button"
+              aria-expanded={showParts}
+              aria-controls={partsId}
+              onClick={() => setShowParts((v) => !v)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primer-blueFg hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primer-blue"
+            >
+              {showParts ? <ChevronDown className="w-3 h-3" aria-hidden="true" /> : <ChevronRight className="w-3 h-3" aria-hidden="true" />}
+              {showParts ? `Hide the other segment${parts.length === 1 ? '' : 's'}` : `Show ${parts.length} more segment${parts.length === 1 ? '' : 's'}`}
+            </button>
+            {showParts && (
+              <ol id={partsId} className="mt-1.5 space-y-1" aria-label="Segments of this signal" data-testid="signal-parts">
+                {parts.map((part, i) => (
+                  <li key={`${part.turn_id}-${part.block}`}>
+                    <button
+                      type="button"
+                      onClick={() => onJump(part.turn_id, part.start)}
+                      aria-label={`Segment ${i + 2} of ${parts.length + 1} at ${clock(part.start)}: jump to the turn`}
+                      className="w-full text-left rounded px-2 py-1 border-l-2 border-border hover:bg-canvas-inset transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primer-blue"
+                    >
+                      <span className="block text-[11px] text-fg-subtle tabular-nums">
+                        Segment {i + 2} · {clock(part.start)}–{clock(part.end)}
+                      </span>
+                      <span className="block text-fg-muted italic" data-part-quote>
+                        {withheld && part.quote === '[REDACTED]' ? '[REDACTED]' : <>&ldquo;{part.quote}&rdquo;</>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
-          {correcting && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <div className="w-full sm:w-72">
-                <SelectInput aria-label="Correct subcategory to" value={correction} onChange={(e) => setCorrection(e.target.value)}>
-                  <option value="">Choose the right subcategory…</option>
-                  {options.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-                </SelectInput>
-              </div>
-              <Button size="sm" variant="primary" busy={busy} disabled={!correction} onClick={() => void send({ subcategory_verdict: 'corrected', corrected_subcategory_id: correction })}>
-                Save correction
+        )}
+
+        {canJudge && (
+          <div className="border-t border-border-muted px-2.5 py-1.5 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-fg-muted">Category:</span>
+              <Button size="sm" variant={categoryVerdict === 'confirmed' ? 'primary' : 'ghost'} aria-pressed={categoryVerdict === 'confirmed'} busy={busy} onClick={() => void send({ category_verdict: 'confirmed' })}>
+                Confirm
               </Button>
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setCorrecting(false)}>
-                Cancel
+              <Button size="sm" variant={categoryVerdict === 'dismissed' ? 'danger' : 'ghost'} aria-pressed={categoryVerdict === 'dismissed'} busy={busy} onClick={() => void send({ category_verdict: 'dismissed' })}>
+                Dismiss
               </Button>
+              {categoryVerdict && <span className="text-fg-subtle">{categoryVerdict === 'confirmed' ? 'Confirmed' : 'Dismissed'}</span>}
+              {!categoryVerdict && earlierFeedback && (
+                <span className="text-fg-subtle" data-testid="signal-earlier-feedback">
+                  A segment was {earlierFeedback.category_verdict === 'confirmed' ? 'confirmed' : 'dismissed'} before the segments merged
+                </span>
+              )}
+              {sig.subcategory_id && (
+                <>
+                  <span className="text-fg-muted ml-2">Subcategory:</span>
+                  <Button
+                    size="sm"
+                    variant={subVerdictCurrent && feedback?.subcategory_verdict === 'confirmed' ? 'primary' : 'ghost'}
+                    aria-pressed={subVerdictCurrent && feedback?.subcategory_verdict === 'confirmed'}
+                    aria-label={`Confirm subcategory ${sub ?? ''}`.trim()}
+                    busy={busy}
+                    onClick={() => void send({ subcategory_verdict: 'confirmed', corrected_subcategory_id: null })}
+                  >
+                    Confirm
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={subVerdictCurrent && feedback?.subcategory_verdict === 'corrected' ? 'primary' : 'ghost'}
+                    aria-expanded={correcting}
+                    disabled={busy || options.length === 0}
+                    onClick={() => setCorrecting((c) => !c)}
+                  >
+                    Correct
+                  </Button>
+                  {subVerdictCurrent && feedback?.subcategory_verdict === 'corrected' && correctedName && <span className="text-fg-subtle">Corrected to {correctedName}</span>}
+                  {subVerdictCurrent && feedback?.subcategory_verdict === 'confirmed' && <span className="text-fg-subtle">Confirmed</span>}
+                  {subVerdictDetached && <span className="text-fg-subtle">Judged an earlier subcategory</span>}
+                </>
+              )}
             </div>
-          )}
-          <ErrorNotice error={error} />
-        </div>
-      )}
+            {correcting && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <div className="w-full sm:w-72">
+                  <SelectInput aria-label="Correct subcategory to" value={correction} onChange={(e) => setCorrection(e.target.value)}>
+                    <option value="">Choose the right subcategory…</option>
+                    {options.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </div>
+                <Button size="sm" variant="primary" busy={busy} disabled={!correction} onClick={() => void send({ subcategory_verdict: 'corrected', corrected_subcategory_id: correction })}>
+                  Save correction
+                </Button>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => setCorrecting(false)}>
+                  Cancel
+                </Button>
+              </div>
+            )}
+            <ErrorNotice error={error} />
+          </div>
+        )}
+      </div>
     </li>
   );
 }
@@ -561,6 +563,7 @@ function WhyDisclosure({ why, categoryId, taxonomy }: { why: SignalHitWhy; categ
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const rule = why.rule;
+  const semantic = isSemanticDecision(why);
   const phrase = rule ? decisionPhrase(taxonomy, categoryId, rule.lexicon_phrase) : null;
   const summary = whySummary(why, phrase);
   const subName = rule ? (rule.subcategory_id ? subcategoryName(taxonomy, categoryId, rule.subcategory_id) : 'Other') : null;
@@ -577,25 +580,20 @@ function WhyDisclosure({ why, categoryId, taxonomy }: { why: SignalHitWhy; categ
           {open ? <ChevronDown className="w-3 h-3" aria-hidden="true" /> : <ChevronRight className="w-3 h-3" aria-hidden="true" />}
           Why
         </button>
-        <span className="text-fg-muted">{why.category_source === 'rules' ? 'Found by rules' : 'Found by Gemma'}</span>
-        {why.check === 'confirmed' && (
-          <span data-testid="signal-why-checked">
-            <Chip tone="green" icon={CheckCircle2} title="Gemma read this rule-found span and confirmed it">
-              Gemma double-checked ✓
-            </Chip>
-          </span>
-        )}
+        <span className="text-fg-muted">{semantic ? 'Found by semantic similarity' : why.category_source === 'rules' ? 'Found by rules' : 'Found by Gemma'}</span>
+        {rule?.system_one_kept && <Chip tone="green" title="Laya and strong semantic example agreement kept this candidate without Gemma confirmation">Laya + semantic agreement ✓</Chip>}
       </div>
       {open && (
         <div id={panelId} className="mt-1.5 space-y-1.5" data-testid="signal-why-panel">
           <p className="text-fg break-words" data-testid="signal-why-summary">
             {summary}
-            {why.check === 'confirmed' ? ' · Gemma double-checked ✓' : ''}
           </p>
           <p className="text-fg-muted">
-            Category decided by {sourceLabel(why.category_source)} · subcategory decided by {sourceLabel(why.subcategory_source)}
+            {semantic ? 'Category proposed by semantic similarity' : `Category decided by ${sourceLabel(why.category_source)}`} · subcategory decided by {semantic && rule?.system_one_kept ? 'semantic example agreement, kept by Laya' : sourceLabel(why.subcategory_source)}
             {rule && why.subcategory_source === 'rules' && subName && ` (${subName}, ${fmt2(rule.subcategory_share)} of the example vote)`}
           </p>
+          {rule?.system_one_score != null && <p className="text-fg-muted">Laya score {fmt2(rule.system_one_score)} · {rule.system_one_kept ? 'kept with strong semantic agreement' : 'routed to Gemma confirmation'} · uncalibrated</p>}
+          {rule?.system_one_fallback && <p className="text-fg-muted">Laya unavailable for this candidate ({rule.system_one_fallback}); routed to Gemma confirmation.</p>}
           {rule && rule.outcomes.length > 0 && (
             <div>
               <p className="font-medium text-fg-muted">Rules</p>

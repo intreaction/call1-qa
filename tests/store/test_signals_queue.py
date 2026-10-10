@@ -67,7 +67,7 @@ def test_the_snapshot_mint_is_idempotent_per_version_and_settings(real, client, 
     assert first["producing_job_id"] is None and first["linked"] and first["version"] == 1
     assert _mint(real, conversation["id"], 1)["id"] == first["id"]
     content = real.get(f"/artifacts/{first['id']}/content").json()
-    assert content["source"] == "published" and content["taxonomy_ref"]["version"] == 1 and content["settings"]["pipeline"] == "v1"
+    assert content["source"] == "published" and content["taxonomy_ref"]["version"] == 1 and content["settings"]["pipeline"] == "v2"
     _settings(client, admin_session, pipeline="shadow")
     changed = _mint(real, conversation["id"], 1)
     assert changed["id"] != first["id"] and changed["slot"] == "signals:v1" and changed["version"] == 2
@@ -203,7 +203,7 @@ def test_claims_order_by_priority_then_age_and_kinds_filter(real, client, admin_
     clock.advance(1)
     signals = client.post(f"{V}/calls/{b['call_id']}/reanalysis-requests", json={"kind": "contact_signals"},
                           headers={**reviewer_session.headers, "Idempotency-Key": "signals-0001"}).json()
-    assert signals["signal_taxonomy_version"] == 1 and signals["signal_pipeline"] == "v1" and signals["priority"] == 0
+    assert signals["signal_taxonomy_version"] == 1 and signals["signal_pipeline"] == "v2" and signals["priority"] == 0
     assert plain["signal_taxonomy_version"] is None and plain["signal_pipeline"] is None
     clock.advance(1)
     preview = client.post(f"{V}/signals/previews", json={"call_ids": [a["call_id"]]}, headers={**admin_session.headers, "Idempotency-Key": "preview-0006"}).json()
@@ -258,7 +258,8 @@ def test_a_rescore_backfill_is_digest_driven_unless_rescore_signals(real, client
         assert response.status_code == 201, response.text
         return response.json()
 
-    # Under v1, a digest-driven backfill has nothing to rerun.
+    _settings(client, admin_session, pipeline="v1")
+    # Under historical v1, a digest-driven backfill has nothing to rerun.
     none = backfill("backfill-0001")
     assert (none["calls_matched"], none["requests_created"], none["calls_skipped"]) == (4, 0, 4)
     _settings(client, admin_session, pipeline="v2")

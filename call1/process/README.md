@@ -61,6 +61,7 @@ The config file lives at `CALL1_PROCESS_CONFIG` (default `data/process/config.js
 | `handlers` | `real` | `fake` or `real` (`CALL1_PROCESS_HANDLERS` overrides) |
 | `rubric_id` | `call1_standard_v2` | The published rubric new recordings are scored with (its current version) |
 | `model_defaults` | catalog defaults | Purpose to catalog entry ID |
+| `system_one_url` / `system_one_model` | `http://127.0.0.1:11434` / `laya` | Default Contact Signals decision cascade through local Ollama's `/v1/systemone` |
 | `escalation_entry_id` | none | The QA escalation model when a criterion names none. None means no escalation, as before the split |
 | `slots` | `cpu_io 4, torch 1, mlx 1, outbound 2` | Local resource slots; `mlx` is always 1 |
 | `stages` | all on | `summary`, `contact_signals`, `embeddings` |
@@ -73,7 +74,7 @@ Environment overrides: `CALL1_PROCESS_HANDLERS`, `CALL1_PROCESS_DATA`, `CALL1_PR
 `CALL1_PROCESS_BIND`, `CALL1_PROCESS_WORKER_ID`, `CALL1_PROCESS_STORE_URL`, `CALL1_PROCESS_MASK_MODEL_TEXT`,
 `CALL1_MODELS_DIR` (models root, default `data/models`), `CALL1_MODEL_MANIFEST`, `CALL1_FAKE_BEHAVIOR`,
 `CALL1_PROCESS_TRAINER` (`fake` or `mlx_lm`), `CALL1_FAKE_TRAINER_SECONDS` / `CALL1_FAKE_TRAINER_EXIT` and
-`CALL1_FAKE_TRAINING_OUTCOMES` (fake-mode training only).
+`CALL1_FAKE_TRAINING_OUTCOMES` (fake-mode training only), `CALL1_SYSTEM_ONE_URL` and `CALL1_SYSTEM_ONE_MODEL`.
 
 ### The one-computer launcher
 
@@ -102,7 +103,7 @@ of the normal launcher; the passkey code is untouched and keeps working beside i
 - **Contact Signals v2.** Right after the migration, before either app starts, `python -m
   call1.store apply-signals-seed call1/store/seeds/signals_retail_v1.json --pipeline v2` publishes
   the retail seed taxonomy (decision 22) and sets `pipeline: v2`, so every seeded call runs the three
-  v2 stages (Gemma or category-specific rules with real handlers; see the rules-engine section). The seed is applied once per demo root
+  v2 stages (semantic similarity → Laya → Gemma with real handlers; see the decision cascade). The seed is applied once per demo root
   (`signals-seeded.json`); later starts only run `signals-pipeline v2`, keeping taxonomy edits.
   `CALL1_SIGNALS_PIPELINE=v1|shadow` overrides the pipeline. On fake handlers the launcher maps
   `call_05_pii_heavy`'s checksum to the `cancel` fake script in `CALL1_FAKE_SCRIPTS` (keeping any
@@ -335,6 +336,13 @@ stage since contract 1.2.0 (`handlers/embeddings.py`, registered by the fake reg
 the transcript fingerprint. Real handlers import runtimes such as MLX and torch lazily, inside
 `run`.
 
+QA scoring uses earned weight divided by assessed weight: PASS earns its weight, FAIL earns
+zero, and FLAGGED (Needs Review) and NOT_APPLICABLE are excluded from the denominator.
+Low-confidence answers become FLAGGED before scoring. A score with an unresolved check is
+provisional: `passed` remains false and `requires_human_review` true, without declaring a
+confirmed failure. A confirmed critical FAIL still fails the call. With no assessed weight,
+the stored numeric placeholder is zero and Evaluate displays an unscored dash.
+
 **The import boundary.** `call1/pipeline/__init__.py` used to import `queue_manager`, which imports
 `call1.db.repository`, so any `call1.pipeline.<module>` import loaded `call1.db`. Its exports are
 now lazy (a PEP 562 module `__getattr__`; `from call1.pipeline import QueueManager` still works),
@@ -412,13 +420,32 @@ to the legacy `QuestionModel` (`call1-bundled`, or a local pack); `generate_text
 the context budget is `context_limit_exceeded`, a missing model is `model_unavailable`, and an answer
 that is not the expected JSON is `validation_rejected` for summaries and signal passes. For QA both
 are outcomes instead: an invalid answer is a FLAGGED assessment with `trigger: invalid_answer`, and
-a prompt over the context budget is a FLAGGED assessment with `trigger: provider_error` and the
-attempt's `error_code: context_limit_exceeded`, completed at once (usage outcome `succeeded`,
-because the contract records `failed` only for `PROVIDER_FAILURE_CODES`). That is the pre-split
-router's behavior: the scorecard still publishes, and a criterion that escalates on
-`provider_error` escalates. Tokens are recorded only when
+long-call QA first replaces repeated transcript field names with lossless compact rows. If the
+whole transcript still exceeds the pinned tokenizer budget (including answer and chat reserves),
+QA reads all turns in chronological sections with adjacent-turn overlap. Oversized individual
+turns are split without dropping text. Each section collects criterion-specific evidence, not a
+local verdict; every quote must match its supplied source. Bounded evidence reduction preserves
+contradictions, actual call boundaries and event order before one whole-call judgment. The final
+quote must match verified section evidence and the full masked transcript. Invalid or incomplete
+evidence requires human review; it never becomes an invented pass or failure. An irreducible
+context error still publishes a FLAGGED assessment with `trigger: provider_error` and
+`error_code: context_limit_exceeded`. Ordinary transcript length automatically uses the section
+path rather than skipping the criterion. All section requests retain the frozen route, masking,
+adapter, cancellation, usage and prompt-digest rules. Training replays compact prompts in their
+recorded format and skips sectioned judgments (`sectioned_qa`), which cannot be reconstructed as
+one original training prompt. Tokens are recorded only when
 a provider reports them (in-process MLX does not, so they are `unavailable`). MLX peak memory is
 measured per attempt.
+
+QA checks configured violations across the whole call before crediting isolated positive
+phrases. Service questions compare the customer's request with the final disposition: an
+unwanted continuation is not an agreed alternative, and a polite farewell does not repair a
+blocked request. Evidence uses a short contiguous quote from the permitted speaker; a caller's
+complaint cannot stand in for the agent's conduct. The criterion and decision checklist follow
+the transcript in the prompt, and section reports retain relevant contrary evidence. Shared
+instructions are sent once in the system message to preserve room for the transcript. Prompt
+versions and training examples change together; changed wording still needs calibration on
+contrasting calls before a library-wide regrade.
 
 **Masking.** Model inputs are masked when the frozen route says `masked` (the pre-split value set:
 sensitive numeric entities plus the PII patterns, over the whole call). The planner sets it for
@@ -521,13 +548,57 @@ words it overlaps in time when they sound and spell alike. It never inserts.
 
 ## Contact Signals v2 (contract 1.3.0)
 
-The design is `docs/ContactSignalsV2.md`; team decisions 21 to 24 are authoritative, and decision 24
-(the latest) wins where they differ. v2 replaces the two whole-transcript Gemma passes with a
-three-stage cascade over ~7 s segments. **All three stages run on the included model, Gemma 4 E2B
-(`call1-bundled`)** (decision 24): the real catalog lists it for `signal_category`,
-`signal_subcategory` and `signal_extraction` and makes it the default for each, so a real install
-plans v2 on Gemma whenever Store's setting says `pipeline: v2`. Laya and Needle are deferred to a
-later "system one" experiment; `CLASSIFIER_ENGINES` keeps the hook for one.
+v2 replaces two whole-transcript Gemma passes with
+segment-based category detection, confirmation/subcategories and evidence extraction. The current
+real process uses **semantic recipes → Laya → Gemma**: `laya-system-one` is the category default,
+and **Gemma 4 E2B (`call1-bundled`)** remains the confirmation and extraction default. This
+supersedes the earlier all-Gemma category default in decision 24. Needle remains deferred.
+
+**Contact Signals decision cascade.** Install Ollama **0.40.0 or newer**, run `ollama pull laya`,
+then restart Process. Real analysis selects `laya-system-one` for candidate triage automatically,
+including when migrating a saved Standard category default. Settings shows the pipeline status;
+there is no Standard/Laya mode switch. Real cascade planning requires a v2 snapshot even if a legacy settings client requests v1 or shadow; historical results stay readable. Store migration 045 selects v2 and disables v1 fallback on both fresh and upgraded installations, preserving historical snapshots and results. Fake handlers remain simulated for tests.
+
+The existing semantic example bank and category recipes propose candidate spans. The local adapter
+calls **`POST /v1/systemone`**, never chat completions, with independent binary `noul` category
+questions on already-masked segments. A candidate bypasses Gemma confirmation only when **all**
+its scored segments have Laya scores >= **0.95**, the category and a named subcategory each have
+example-vote shares >= **0.80**, and a category-matching neighbour has cosine similarity >= **0.75**.
+The subcategory remains the semantic bank's vote, not a Laya classification. Every other candidate,
+including low Laya scores and malformed/oversized/failed decisions, goes to **Gemma confirmation**.
+A low Laya score never silently discards a semantic candidate. Gemma still extracts evidence fields. Objective confirmation requires both
+`speech_act: request` and `objective_status: new_request`; facts/answers, repeated outcomes,
+conversational permission and vague fragments cannot pass through a topic match alone. Within
+Gemma confirmation, a short first prompt classifies the target utterance alone as a question,
+request, fact, preference/answer, caller plan, desire/reason, or fragment, without topic options or prior context.
+Only questions and requests proceed to the contextual prompt, which checks whether the request
+is new and selects its kind. Both requests use the same frozen Gemma entry and contribute to
+its recorded usage. Objective
+confirmation uses the target and earlier context, excluding future segments so a fragment cannot
+borrow a requested outcome from the next sentence.
+Categories without a semantic recipe use a versioned default semantic-share threshold of **0.50**
+with no lexicon bonus. The effective recipe digests are recorded in rules provenance; the pinned
+taxonomy is not edited. The included retail taxonomy has configured recipes for every category.
+
+Detailed evidence extraction permits up to **64 spans per call**, increased from 24 so longer
+conversations can retain their fields. Gemma still packs spans within each prompt's token budget.
+Spans beyond 64 remain categorized and the result explicitly reports `extraction_cap` as partial.
+
+Each rule decision records `system_one_score`, `system_one_kept` and `system_one_fallback` so the
+shortcut and fallback are auditable. The installed model digest is frozen on jobs and checked before
+and after inference. Only loopback endpoints are supported; redirects and environment proxies are
+disabled. `keep_alive: 0` releases Ollama's model after each request before Gemma uses the GPU.
+
+The English `laya` model has a **512-token context**. The adapter reserves question overhead,
+uses a conservative byte bound and drops whole preceding context segments when needed. It never
+truncates the target: an oversized target or gloss goes to Gemma confirmation. Configure other tags
+with `system_one_model` / `CALL1_SYSTEM_ONE_MODEL`; discovery reads their context limit.
+The installed English model missed basic requests in initial probes. These thresholds are **unfitted**;
+no precision, recall or speed improvement is claimed. Validate candidate routing and confident mistakes
+on labeled calls. Catalog availability establishes protocol compatibility, not domain accuracy.
+See [Ollama's Laya API](https://ollama.com/library/laya) and
+[the Laya implementation](https://github.com/NandhaKishorM/laya).
+
 
 **Planning** (`graph.py`, `signals_input.py`).
 
@@ -731,6 +802,7 @@ cross-origin `Origin` is refused. Errors are `{code, message, details}`.
 | `POST /process/api/jobs/{id}/retry` `{reason}` | Store retry through Process's key; needs `jobs:control`. A 403 `insufficient_scope` explains how to add it |
 | `POST /process/api/jobs/{id}/cancel` `{reason, cascade}` | Store cancel; same scope rule |
 | `GET /process/api/catalog` | Entries (status, qualified purposes, runtime, route), defaults, handlers, masking |
+| `GET /process/api/signals/first-pass` | Read-only default cascade status (`semantic-laya-gemma`, or simulated `fake`), local model/endpoint, availability and safe unavailable reason |
 | `POST /process/api/recordings` | Multipart `file` plus optional `agent_id`, `agent_display_name`, `agent_extension`, `agent_channel` and `external_call_ref` → `{conversation_id, call_id, graph_id, conversation_created, graph_created, jobs, evaluate_url, metadata_updated, updated_fields, agent_label}`. Metadata the contract rejects answers 422 `validation_failed` before anything is registered |
 
 | `GET /process/api/training` | On-device training: `{available, unavailable_reason, settings, trainer, timezone, next_run_at, labels: {total, new_since_last_run, error}, status: {phase, run_id, trigger, detail, progress, claims_paused}, last_check, active, versions, runs, notices}` (the last 20 runs) |
@@ -879,7 +951,9 @@ tests cover:
     are decided when the graph is planned, from the previous stage artifacts.
   - *Engine thresholds.* The per-engine thresholds live in `signal_stages.ENGINE_DEFAULTS`
     (fake: stage 1 0.3, stage 2 0.5, reject 0.5; Gemma: 0.5 each, between its pick scores). A later
-    "system one" engine registers its fitted values there.
+    engine registers its fitted values there. The semantic/Laya cascade uses an unfitted 0.95 Laya
+    shortcut threshold plus strong semantic agreement; provenance records `semantic-laya-unfitted-v1`
+    with the semantic-policy digest. Semantic candidates retain the existing 0.9/0.7 pick scores.
 - **Contact-signal passes are not split into windows yet.** Each kind runs one pass over the whole
   transcript. Windows need the transcript, and a merge's `after` edges cannot be added through
   `NewDependency`, which creates success edges only. A pass that overflows its context rejects or
@@ -895,8 +969,7 @@ tests cover:
     passes as well as QA and summaries; the legacy pipeline sent signal extraction the raw
     transcript. Quotes are checked against the masked text.
   - *Signal context overflow is a failure.* A contact-signal pass over the MLX 8,192-token budget
-    fails with `context_limit_exceeded` and the merge publishes `partial`. (A QA prompt over the
-    budget is a FLAGGED assessment, as before the split; see "LLM calls".)
+    fails with `context_limit_exceeded` and the merge publishes `partial`. (Long-call QA uses compact transcripts and complete section evidence review; see "LLM calls".)
   - *Contact signals run without MLX.* On a non-MLX host they use the loopback Ollama; the legacy
     pipeline skipped extraction and marked it partial.
   - *Summaries use constrained decoding.* They pass `SUMMARY_SCHEMA` to the model, as the

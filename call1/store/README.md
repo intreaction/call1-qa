@@ -18,7 +18,7 @@ python -m call1.embedding download          # the search embedder's weights, int
 python -m call1.store request-reembedding   # re-embed calls indexed under an older search scheme
 python -m call1.store apply-signals-seed call1/store/seeds/signals_retail_v1.json --pipeline v2   # demo seed (1.3.0)
 python -m call1.store apply-vocabulary-seed call1/store/seeds/asr_vocabulary_retail_v1.json   # demo ASR vocabulary pack (1.3.0)
-python -m call1.store signals-pipeline v2      # set the Contact Signals pipeline (v1, shadow or v2)
+python -m call1.store signals-pipeline v2      # current process (also selected by migration)
 python -m call1.store project-signals          # project contact signals published before 1.3.0
 ```
 

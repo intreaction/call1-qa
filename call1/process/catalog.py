@@ -12,8 +12,9 @@ snapshot. The seeded entries are the models the appliance ships today:
   pinned revision, the same model Store embeds queries with; contract 1.2.0).
 * ``call1-bundled`` also serves all three Contact Signals v2 purposes (contract 1.3.0):
   ``signal_category``, ``signal_subcategory`` and ``signal_extraction``, and is their real-mode
-  default (team decision 24, which replaces decision 21's Laya/Needle engines and Q15). A later
-  "system one" engine would register as another entry under the two classifier purposes.
+  default (team decision 24, which replaces decision 21's Laya/Needle engines and Q15).
+* ``laya-system-one`` is the optional experimental local Ollama decision engine, for
+  ``signal_category`` only. Confirmation and extraction keep their separate selections.
 * In fake mode only, ``fake-signal-classifier`` (both classifier purposes) and
   ``fake-signal-extractor`` (``signal_extraction``) register, like ``fake-embedding-v1``, and are the
   defaults for their purposes. They are labelled "fake" wherever an engine name shows.
@@ -27,7 +28,7 @@ snapshot. The seeded entries are the models the appliance ships today:
   the masking step inside the masked text-model jobs runs it. The entry lists it for the console and
   the published snapshot, with its install status and license.
 
-Every seeded entry runs in-process on the appliance route. The contract's ``ProviderType`` has no
+Curated weights run in-process on the appliance route; Laya runs on loopback Ollama. The contract's ``ProviderType`` has no
 value for an in-process runtime other than MLX, so the torch-based tone, sentiment and embedding
 models are recorded as provider ``mlx`` with destination ``in-process``; the Process
 entry's ``runtime`` field says what really runs (raised as a contract gap in the README).
@@ -120,6 +121,9 @@ class CatalogEntry:
     required_files: Tuple[Tuple[str, Optional[str]], ...] = ()
     """Files besides ``config.json`` and the weights that must be in the model directory for the entry
     to count as installed, each with its pinned sha256 (hex) or None."""
+    endpoint_url: Optional[str] = None
+    """Local System One base URL. Validated as loopback; never a credential."""
+    mutable_alias: bool = False
 
     @property
     def ref(self) -> CatalogEntryRef:
@@ -145,7 +149,7 @@ class CatalogEntry:
             catalog_entry=self.ref, purpose=purpose, model_family=self.model_family, model_revision=self.model_revision,
             weights_digest=self.weights_digest, adapter_id=self.adapter_id, adapter_version=self.adapter_version,
             output_contract=output_contract or PURPOSE_OUTPUT_CONTRACTS[purpose], provider_model_id=self.provider_model_id,
-            route=self.route(masked=masked),
+            route=self.route(masked=masked), mutable_alias=self.mutable_alias,
         )
 
 
@@ -162,6 +166,10 @@ def installed_status(entry: CatalogEntry, root: Optional[Path] = None) -> Tuple[
     for their purposes (the appliance qualification gates run locally, not here)."""
     if not entry.supported:
         return CatalogEntryStatus.UNQUALIFIED, []
+    if entry.endpoint_url is not None:
+        from .system_one import entry_status
+
+        return entry_status(entry)
     if entry.runtime == "code" or entry.model_directory is None:
         return CatalogEntryStatus.AVAILABLE, list(entry.purposes)
     path = (root or models_root()) / entry.model_directory
@@ -293,7 +301,7 @@ class ProcessCatalog:
                 resource_profile=ResourceProfile(memory_bytes=entry.memory_bytes, context_limit_tokens=entry.context_limit_tokens,
                                                  output_token_limit=entry.output_token_limit),
                 license_notice=(entry.license_notice[:197] + "...") if entry.license_notice and len(entry.license_notice) > 200 else entry.license_notice,
-                mutable_alias=False, legacy_question_model_id=entry.legacy_question_model_id,
+                mutable_alias=entry.mutable_alias, legacy_question_model_id=entry.legacy_question_model_id,
             ))
         return items
 
@@ -449,10 +457,15 @@ def fake_signal_entries() -> List[CatalogEntry]:
 
 
 def seeded_catalog(*, mode: str = "fake", overrides: Optional[Mapping[str, str]] = None, manifest: Optional[Dict[str, dict]] = None,
-                   status_fn: Optional[EntryStatusFn] = None) -> ProcessCatalog:
+                   status_fn: Optional[EntryStatusFn] = None, system_one_url: Optional[str] = None,
+                   system_one_model: str = "laya") -> ProcessCatalog:
     """The catalog this installation starts with. ``overrides`` maps a purpose value to an entry ID
     (``model_defaults`` in the config)."""
     entries = seeded_entries(manifest)
+    if mode == "real" and system_one_url is not None:
+        from .system_one import catalog_entry
+
+        entries.append(catalog_entry(system_one_url, system_one_model))
     defaults = dict(DEFAULT_PURPOSE_ENTRIES)
     if mode == "fake":
         entries += fake_signal_entries()
@@ -466,6 +479,10 @@ def seeded_catalog(*, mode: str = "fake", overrides: Optional[Mapping[str, str]]
         if entry_id not in known:
             raise CatalogError(f"model_defaults: {entry_id!r} is not in the catalog")
         defaults[purpose] = entry_id
+    if mode == "real" and system_one_url is not None:
+        from .system_one import ENTRY_ID
+
+        defaults[ModelPurpose.SIGNAL_CATEGORY] = ENTRY_ID
     fn = status_fn or (fake_status if mode == "fake" else installed_status)
     return ProcessCatalog(entries, defaults, fn)
 

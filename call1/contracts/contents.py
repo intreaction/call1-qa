@@ -1124,9 +1124,14 @@ class SignalRuleDecision(ContractModel):
     subcategory_id: Optional[SignalNodeId] = Field(default=None, description="The kNN vote's subcategory; null means Other.")
     subcategory_share: float = Field(default=0.0, ge=0, le=1, description="The winning subcategory's share of the category's vote.")
     check: bool = Field(default=False, description="The recipe asks Gemma to confirm or reject the span (subcategorize runs today's stage-2 prompt on it).")
+    system_one_score: Optional[float] = Field(default=None, ge=0, le=1, description="Optional Laya category score, not a calibrated accuracy probability.")
+    system_one_kept: bool = Field(default=False, description="Laya and strong semantic category/subcategory agreement allowed this span to bypass Gemma confirmation.")
+    system_one_fallback: Optional[JobErrorCode] = Field(default=None, description="Why Laya could not score the candidate; Gemma must confirm it.")
 
     @model_validator(mode="after")
     def _decision(self):
+        if self.system_one_kept and (self.system_one_score is None or self.check or self.system_one_fallback is not None):
+            raise ValueError("a System One shortcut has a score, no fallback, and no Gemma check")
         if not self.span_key.startswith(self.category_id + ".t"):
             raise ValueError("a rule decision's span key is its category's")
         if self.subcategory_id in (SIGNAL_OTHER_OPTION, SIGNAL_NOT_OPTION):

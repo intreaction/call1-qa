@@ -564,8 +564,8 @@ def builtin_signal_taxonomy() -> SignalTaxonomy:
 
 
 class SignalSettings(ContractModel):
-    pipeline: SignalPipeline = Field(default="v1", description="v1: today's passes (Store still projects v1 hits). shadow: v1 publishes and every v1 publish gets a companion v2 compare request. v2: new calls and reanalysis run v2.")
-    v1_fallback: bool = Field(default=True, description="v2 selected but no usable stage-1/stage-2 entry on the host: build v1, labelled with pipeline_note. Otherwise the merge records configuration_error.")
+    pipeline: SignalPipeline = Field(default="v2", description="v2 is the current process for new calls and reanalysis. v1 and shadow remain readable for historical snapshots.")
+    v1_fallback: bool = Field(default=False, description="Legacy/fake planner compatibility: permits v1 when no usable v2 entries exist, labelled with pipeline_note. The real semantic/Laya/Gemma process never downgrades to v1.")
     fallback_extraction_entry_id: Optional[ShortText] = Field(default=None, description="The stage-3 in-job fallback entry; null = the signal_extraction default (Gemma, call1-bundled).")
     detection: Literal["model", "rules"] = Field(default="model", description="Added in 1.4.0 (docs/SignalsEmbeddings.md). model: today's Gemma stages for every category, recipes ignored. rules: a category whose recipe engine is rules is decided by the rules engine; the rest keep Gemma.")
 

@@ -11,7 +11,9 @@ What it does, each step idempotent (a second run changes nothing):
    COMP-01 "Mandatory Regulatory Disclosures" set to ``requires_policy`` with no
    ``policy_context``, so both are always FLAGGED and no call passes. This publishes the next
    version of the rubric with ``contextual_rubrics.RETAIL_DEMO_POLICY`` in those checks (draft
-   save, then publish, as the demo admin). An open draft is replaced: the demo has no other author.
+   save, then publish, as the demo admin). Recording disclosure remains visible but is non-critical
+   with weight five, so that finding alone cannot fail an otherwise passing scorecard. An open
+   draft is replaced: the demo has no other author.
 2. **Alert rule**: ``stock-check`` fires on the retail taxonomy's intent subcategory
    ``check_stock_availability`` ("Check stock / availability"), so Metrics > Alerts, the calls
    list's "Any alert" filter and the change feed have something to show.
@@ -29,11 +31,11 @@ from __future__ import annotations
 import uuid
 from typing import Any, Callable, Dict, List, Optional
 
-from call1.pipeline.contextual_rubrics import RETAIL_DEMO_POLICY, with_policy
+from call1.pipeline.contextual_rubrics import RETAIL_DEMO_POLICY, with_demo_recording_weight, with_policy
 
 V = "/store/v1"
 DEMO_RUBRIC_ID = "call1_standard_v2"
-DEMO_POLICY_NOTES = "Demo: retail verification and disclosure policy for SEC-01 and COMP-01 (call1.demo_setup)."
+DEMO_POLICY_NOTES = "Demo: retail verification and disclosure policy; recording disclosure is non-critical with weight five (call1.demo_setup)."
 
 DEMO_ALERT_RULE: Dict[str, Any] = {
     "rule_id": "stock-check",
@@ -85,9 +87,12 @@ def sign_in(client, persona: str = "admin") -> Dict[str, str]:
 
 def apply_policy(client, headers: Dict[str, str], rubric_id: str = DEMO_RUBRIC_ID,
                  policy: Optional[Dict[str, str]] = None) -> Optional[int]:
-    """Publish the next rubric version with the policy text; None when the current one has it."""
+    """Publish demo policy and disclosure weight; None when the current version has both."""
     current = _check(client.get(f"{V}/rubrics/{rubric_id}", headers=headers), f"read rubric {rubric_id}").json()
     definition, changed = with_policy(current["definition"], policy or RETAIL_DEMO_POLICY)
+    if rubric_id == DEMO_RUBRIC_ID:
+        definition, recording_changed = with_demo_recording_weight(definition)
+        changed = changed or recording_changed
     if not changed:
         return None
     draft = client.get(f"{V}/rubrics/{rubric_id}/draft", headers=headers)
@@ -156,8 +161,8 @@ def apply_demo_setup(client, *, reanalyze: bool = False, say: Callable[[str], No
     summary: Dict[str, Any] = {}
     version = apply_policy(client, headers)
     summary["rubric_version"] = version
-    say(f"Rubric {DEMO_RUBRIC_ID}: published version {version} with the retail verification and disclosure policy."
-        if version else f"Rubric {DEMO_RUBRIC_ID}: already carries the retail policy.")
+    say(f"Rubric {DEMO_RUBRIC_ID}: published version {version} with retail policy and non-critical recording disclosure."
+        if version else f"Rubric {DEMO_RUBRIC_ID}: already carries retail policy and non-critical recording disclosure.")
     try:
         created = apply_alert_rule(client, headers)
         summary["alert_rule"] = created

@@ -31,6 +31,25 @@ def test_executive_metrics(fq, client, reviewer_session):
     assert later["total_audited_calls"] == 0
 
 
+def test_pending_review_does_not_count_as_a_failed_call(fq, client, reviewer_session):
+    _call(fq, [("REG-01", VerdictStatus.PASS, 0.9)], overall_score=100, passed=True)
+    _call(fq, [("REG-01", VerdictStatus.FAIL, 0.9)], overall_score=40, passed=False)
+    for provisional in (0, 100):
+        _call(fq, [("REG-01", VerdictStatus.FLAGGED, 0.3)], overall_score=provisional,
+              passed=False, requires_human_review=True)
+    executive = client.get("/store/v1/metrics/executive", headers=reviewer_session.read_headers).json()
+    assert executive["total_audited_calls"] == 4
+    assert executive["supervisor_escalations"] == 2
+    assert executive["average_score"] == 70.0
+    assert executive["pass_rate_pct"] == 50.0
+    rubric = client.get("/store/v1/metrics/rubrics/call1_standard_v2", headers=reviewer_session.read_headers).json()
+    assert rubric["total_calls_evaluated"] == 4
+    assert rubric["average_score"] == 70.0 and rubric["pass_rate_pct"] == 50.0
+    assert sum(day["evaluated"] for day in rubric["daily"]) == 2
+    counts = next(c["counts"] for c in rubric["criteria"] if c["criterion_id"] == "REG-01")
+    assert counts == {"PASS": 1, "FAIL": 1, "FLAGGED": 2, "NOT_APPLICABLE": 0, "total": 4, "pass_rate_pct": 50.0}
+
+
 def test_failed_call_is_not_pending_analysis(fq, client, reviewer_session):
     """A call whose scorecard job ended without a result ('Needs attention') is not pending: it
     will not get a scorecard until someone reanalyses it. A call still in flight stays pending."""
@@ -56,14 +75,14 @@ def test_hours_audited_keeps_short_calls(fq, client, reviewer_session):
 def test_rubric_metrics_use_the_current_version_of_each_call(fq, client, reviewer_session):
     conv = _call(fq, [("REG-01", VerdictStatus.FAIL, 0.9), ("SEC-01", VerdictStatus.PASS, 0.9)], overall_score=50, passed=False)
     fq.ingest_qa(conv, [("REG-01", VerdictStatus.PASS, 0.9), ("SEC-01", VerdictStatus.PASS, 0.9)], overall_score=100)
-    _call(fq, [("REG-01", VerdictStatus.FLAGGED, 0.3), ("SEC-01", VerdictStatus.NOT_APPLICABLE, 0.9)], overall_score=80)
+    _call(fq, [("REG-01", VerdictStatus.FLAGGED, 0.3), ("SEC-01", VerdictStatus.NOT_APPLICABLE, 0.9)], overall_score=0, passed=False, requires_human_review=True)
     body = client.get("/store/v1/metrics/rubrics/call1_standard_v2", headers=reviewer_session.read_headers).json()
-    assert body["rubric_name"].startswith("Call1 Standard") and body["total_calls_evaluated"] == 2 and body["average_score"] == 90.0
+    assert body["rubric_name"].startswith("Call1 Standard") and body["total_calls_evaluated"] == 2 and body["average_score"] == 100.0
     by_id = {c["criterion_id"]: c for c in body["criteria"]}
     assert [c["criterion_id"] for c in body["criteria"]][:4] == ["REG-01", "SEC-01", "COMP-01", "ETIQ-01"]
-    assert by_id["REG-01"]["counts"] == {"PASS": 1, "FAIL": 0, "FLAGGED": 1, "NOT_APPLICABLE": 0, "total": 2, "pass_rate_pct": 50.0}
+    assert by_id["REG-01"]["counts"] == {"PASS": 1, "FAIL": 0, "FLAGGED": 1, "NOT_APPLICABLE": 0, "total": 2, "pass_rate_pct": 100.0}
     assert by_id["COMP-01"]["counts"]["total"] == 0 and by_id["REG-01"]["category"] == "COMPLIANCE"
-    assert body["daily"] == [{"date": "2026-09-25", "evaluated": 2, "mean_score": 90.0}]
+    assert body["daily"] == [{"date": "2026-09-25", "evaluated": 1, "mean_score": 100.0}]
     assert client.get("/store/v1/metrics/rubrics/unknown", headers=reviewer_session.read_headers).status_code == 404
 
 

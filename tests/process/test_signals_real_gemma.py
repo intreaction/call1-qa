@@ -1,5 +1,5 @@
 """Contact Signals v2 on the real handler registry and the real catalog, end to end against an
-in-process Store, with Gemma behind a scripted ``generate_text`` (team decision 24: the included model,
+in-process Store, preserving the historical all-Gemma route with Gemma behind a scripted ``generate_text`` (team decision 24: the included model,
 ``call1-bundled``, runs all three stages). No GPU, no weights, no ports.
 
 * Ingest with the Store setting ``pipeline: v2`` mints the taxonomy snapshot and plans the cascade on
@@ -50,6 +50,9 @@ class ScriptedGemma(ScriptedLlm):
         self.prompts.append((schema_name, prompt))
         self.models = getattr(self, "models", []) + [model.id]
         body = json.loads(prompt)
+        if "targets" in body:
+            return json.dumps({target["id"]: {"form": "agent_request"}
+                               for target in body["targets"]}), {}
         if schema_name == "signal_extraction":
             return json.dumps({span["span_id"]: {"assessment": "The caller cancels because the price rose.",
                                                  "reason": {"value": "price", "evidence_quote": "the price went up"},
@@ -59,7 +62,7 @@ class ScriptedGemma(ScriptedLlm):
             for span in body["spans"]:
                 options = [o["id"] for o in span["options"]]
                 choice = "cancel_account" if "cancel" in span["span"] and "cancel_account" in options else SIGNAL_OTHER_OPTION
-                answer[span["id"]] = {"assessment": "The caller asks to cancel.", "fits": "yes", "choice": choice}
+                answer[span["id"]] = {"assessment": "The caller asks to cancel.", "fits": "yes", "choice": choice, "speech_act": "request", "objective_status": "new_request"}
             return json.dumps(answer), {}
         answer = {}
         for segment in body["segments"]:
@@ -71,7 +74,7 @@ class ScriptedGemma(ScriptedLlm):
 @pytest.fixture
 def gemma_runtime(make_runtime, monkeypatch, tmp_path):
     def build(**overrides):
-        runtime = _real_runtime(make_runtime, monkeypatch, tmp_path, script=SCRIPT, name=f"gemma-{len(overrides)}", **overrides)
+        runtime = _real_runtime(make_runtime, monkeypatch, tmp_path, script=SCRIPT, name=f"gemma-{len(overrides)}", legacy_signals=False, **overrides)
         llm = ScriptedGemma()
         monkeypatch.setattr("call1.question_models.generate_text", llm)
         runtime.test_llm = llm  # type: ignore[attr-defined]
@@ -209,6 +212,9 @@ class GemmaStub:
                  synthetic=False, text_model_path=None):
         self.prompts.append((schema_name, model.id, system, prompt))
         body = json.loads(prompt)
+        if "targets" in body:
+            return json.dumps({target["id"]: {"form": "agent_request"}
+                               for target in body["targets"]}), {}
         if schema_name == "signal_extraction":
             return json.dumps({span["span_id"]: {"assessment": "Read the span."} for span in body["spans"]}), dict(self.reported)
         if "spans" in body:

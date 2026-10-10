@@ -273,4 +273,4 @@ def test_span_decision_takes_the_strongest_window_and_the_knn_subcategory():
     decision = sr.span_decision(span, fires, {(u.turn_id, u.window): u for u in units}, plans[0], index, knn)
     assert decision.segment_index == 1 and decision.subcategory_id == "check_stock_availability"
     assert decision.subcategory_share == pytest.approx(0.5 / 0.6, rel=1e-5) and decision.recipe_digest == plans[0].digest12
-    assert decision.knn_share == pytest.approx(0.6, rel=1e-5) and decision.lexicon_match and not decision.check
+    assert decision.knn_share == pytest.approx(0.6, rel=1e-5) and decision.lexicon_match and decision.check

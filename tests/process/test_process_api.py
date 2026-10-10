@@ -49,6 +49,13 @@ def test_session_marks_only_demo_launches(api, monkeypatch):
     assert api.get("/process/api/session").json()["demo"] is True
 
 
+def test_signal_pipeline_status_has_no_mode_switch(api):
+    path = "/process/api/signals/first-pass"
+    assert api.get(path).json()["engine"] == "fake"
+    assert api.get(path).json()["available"] is False
+    assert api.put(path, json={"engine": "standard"}, headers={console.HEADER: api.token}).status_code == 405
+
+
 def test_demo_recording_is_credential_and_demo_gated(api, monkeypatch):
     monkeypatch.delenv("CALL1_STORE_DEMO", raising=False)
     assert api.post("/process/api/demo/recordings").status_code == 401

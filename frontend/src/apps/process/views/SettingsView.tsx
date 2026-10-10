@@ -1,8 +1,8 @@
 // Settings → On-device training (docs/OnDeviceTraining.md §6). Trains a private LoRA for the
 // included model from reviewers' own corrections in Evaluate, on a schedule the customer sets
 // here. Labels, the dataset and the adapter never leave this Process host — Store sees only the
-// version string in provenance (§7.2). Talks only to `/process/api/training*` (§6.1); it never
-// reaches Store or the trainer subprocess directly.
+// version string in provenance (§7.2). The pipeline status uses `/signals/first-pass`;
+// training uses `/process/api/training*` (§6.1). Neither reaches Store or the trainer directly.
 
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +23,7 @@ import {
   type TrainingVersion,
 } from '../api';
 import { ModelPicker } from '../components/ModelPicker';
+import { SignalPipelineStatus } from '../components/SignalPipelineStatus';
 import { FineTuneExperience } from '../components/FineTuneExperience';
 import { ConsoleTokenNotice } from '../components/ConsoleTokenNotice';
 import { ConfirmAction } from '../components/ConfirmAction';
@@ -742,6 +743,7 @@ export default function SettingsView({
         }
       />
       {!canWrite && <ConsoleTokenNotice configured={tokenConfigured} onToken={onToken} />}
+      <SignalPipelineStatus />
       {query.isLoading && <Loading label="Loading training settings…" />}
       <ErrorNotice error={query.error} />
 

@@ -12,6 +12,16 @@ was a working file and is not in the repo.
 (`--pipeline v2` also sets the pipeline) publishes it as an audited save; `--demo` uses it. Installs
 start with the built-ins only (decision 22). A seed that is already current is a no-op.
 
+**Objective precision.** The retail rules propose candidate spans; Caller objective now
+uses the Gemma confirmation pass before publishing a hit. Its prompt gives explicit positive and
+negative examples and requires a new requested outcome. The confirmation pass rejects supporting details,
+acknowledgements and restatements, and chooses the objective subtype from the actual request.
+For objectives, the model also declares whether the span is a request, answer, background,
+acknowledgement, repetition or unclear. An objective is accepted only when this decision is
+`request` and its confirmation is positive; a subtype alone cannot override that decision.
+Caller confirms resolved also uses this confirmation pass. Existing demo roots retain their saved
+taxonomy: apply the updated recipes and request Contact Signals reanalysis to update existing calls.
+
 **Contract 1.3.0 fixes (F2).** Speakers are the `SpeakerRole` values (`CALLER`, `AGENT`) and every
 example is a plain string, as the final contract requires; `tests/store/test_signals_taxonomy.py`
 and `tests/test_contracts.py` check that the file passes the save validator (caps and the

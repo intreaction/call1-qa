@@ -600,6 +600,19 @@ export function getCatalog(): Promise<CatalogResponse> {
   return request('/catalog', null);
 }
 
+export interface SignalFirstPass {
+  engine: 'semantic-laya-gemma' | 'fake';
+  available: boolean;
+  reason: string | null;
+  model: string;
+  endpoint: string;
+  experimental: boolean;
+}
+
+export function getSignalFirstPass(): Promise<SignalFirstPass> {
+  return request('/signals/first-pass', null);
+}
+
 export function getTraining(): Promise<TrainingState> {
   return request('/training', null);
 }
@@ -707,6 +720,7 @@ export const queryKeys = {
   conversation: (id: string) => ['process-conversation', id] as const,
   job: (id: string) => ['process-job', id] as const,
   catalog: ['process-catalog'] as const,
+  signalFirstPass: ['process-signal-first-pass'] as const,
   training: ['process-training'] as const,
   trainingRuns: (limit: number) => ['process-training-runs', limit] as const,
 };

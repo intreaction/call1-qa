@@ -12,7 +12,7 @@ from call1.contracts.common import CONTRACT_PARAMETERS, canonical_json
 from call1.contracts.contents import ContactSignalKind, ContactSignalsContent, QuoteRange, SpeakerRole
 from call1.contracts.errors import JobErrorCode
 from call1.contracts.jobs import JobType
-from call1.contracts.signals import category_digest
+from call1.contracts.signals import SignalField, category_digest
 from call1.process.handlers import build_registry
 from call1.process.handlers.base import HandlerError
 from call1.process.handlers.fake import CALLER_NAME_SCRIPT, CANCEL_SCRIPT, SCRIPT
@@ -174,6 +174,18 @@ def test_a_missing_stage_two_or_three_output_is_partial_and_names_the_stage(tmp_
     run = run_v2(tmp_path, CANCEL_SCRIPT, cancel_taxonomy(), skip=["extract"])
     assert run.result.completeness == "partial" and "Fields unavailable (provider_error)" in run.result.partial_reason
     assert next(h for h in run.result.signals if h.category_id == "intent").subcategory_id == "cancel_account"
+
+
+def test_long_call_extracts_fields_beyond_the_old_twenty_four_span_limit(tmp_path):
+    item = SignalField(field_id="item", name="Item number", type="number", description="The item number being discussed", pii_class="none")
+    taxonomy = with_categories([custom_category("thanks", name="Thanks", gloss="Someone thanks the other", examples=["thank"], fields=[item])])
+    script = [(SpeakerRole.CALLER, f"Thank you for checking item {i}.") for i in range(32)]
+    run = run_v2(tmp_path, script, taxonomy)
+    thanks = [hit for hit in run.result.signals if hit.category_id == "thanks"]
+    assert len(run.extraction.spans) == 32 and sum(1 + len(hit.parts) for hit in thanks) == 32
+    assert [span.fields[0].value for span in run.extraction.spans] == list(range(32))
+    assert all(span.fields[0].status == "extracted" for span in run.extraction.spans)
+    assert run.result.completeness == "complete" and run.result.partial_reason is None
 
 
 def test_spans_past_the_extraction_cap_stay_categorized_and_the_result_says_so(tmp_path, monkeypatch):

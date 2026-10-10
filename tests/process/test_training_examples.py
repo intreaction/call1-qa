@@ -108,8 +108,9 @@ def test_every_answer_round_trips_through_the_engines_parser(tmp_path, train_cal
             assert answer["roles"] == {"S1": "agent", "S2": "caller"}  # the reviewer's correction applied
             assert answer["assessment"] == "S1 speaks for the contact centre; S2 is the caller."
         elif example.task == "signal_stage2":
-            for got in answer.values():
-                assert list(got) == ["assessment", "fits", "choice"]
+            for key, got in answer.items():
+                assert list(got) == (["objective_status", "speech_act", "assessment", "fits", "choice"] if key.startswith("intent.")
+                                     else ["assessment", "fits", "choice"])
 
 
 def test_stage1_and_stage2_user_messages_are_the_engines_render_batch(tmp_path, train_call):
@@ -165,6 +166,21 @@ def test_qa_evidence_paths(tmp_path):
     assert answers[calls[0]] == {"assessment": "The evidence is insufficient or ambiguous for this criterion.", "verdict": "needs_review", "quote": ""}
     assert calls[1] not in answers and result.skipped["no_evidence"] == 1
     assert answers[calls[2]]["assessment"].endswith(" The required behavior is not in the transcript.")
+
+
+def test_sectioned_qa_is_not_misrepresented_as_single_prompt_training(tmp_path, train_call):
+    from call1.contracts.contents import PromptInputContent
+
+    store = FakeStore()
+    add_qa_call(store, tmp_path, train_call, 0)
+    label = store.labels[0]
+    source = next(ref for ref in label.sources if ref.role == "prompt_input")
+    content = PromptInputContent.model_validate_json(store.artifacts[source.artifact_id][1])
+    sectioned = content.model_copy(update={"template_id": content.template_id + ".sectioned"})
+    replacement = store.add(source.kind, sectioned, source.role)
+    store.labels[0] = label.model_copy(update={"sources": [replacement if ref.role == source.role else ref for ref in label.sources]})
+    result = build(store, tmp_path)
+    assert not result.examples and result.skipped["sectioned_qa"] == 1
 
 
 def test_an_agreeing_escalation_supplies_the_reasoning_and_quote(tmp_path, train_call):

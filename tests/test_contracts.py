@@ -1897,7 +1897,7 @@ def test_signal_taxonomy_outer_ceilings():
 
 def test_signal_caps_are_contract_parameters_the_save_validator_reads():
     p = common.CONTRACT_PARAMETERS
-    assert (p.max_custom_signal_categories, p.max_active_subcategories, p.max_fields_per_path, p.max_option_gloss_chars, p.max_signal_alert_rules, p.signal_preview_max_calls, p.signal_backfill_max_calls, p.max_extraction_spans_per_call) == (8, 12, 12, 40, 50, 10, 500, 24)
+    assert (p.max_custom_signal_categories, p.max_active_subcategories, p.max_fields_per_path, p.max_option_gloss_chars, p.max_signal_alert_rules, p.signal_preview_max_calls, p.signal_backfill_max_calls, p.max_extraction_spans_per_call) == (8, 12, 12, 40, 50, 10, 500, 64)
     assert api.contract_extensions()["parameters"]["max_option_gloss_chars"] == 40
     check = signals.signal_taxonomy_cap_violations
     assert check(_taxonomy(UPSELL, intent={"subcategories": [CANCEL]})) == []
@@ -2070,7 +2070,7 @@ def test_signal_taxonomy_snapshot_is_reused_only_with_the_current_settings():
     settings = signals.SignalSettings(pipeline="v2")
     snap = signals.SignalTaxonomySnapshotContent(source="published", taxonomy_ref=v.ref, taxonomy=t, settings=settings)
     assert signals.signal_taxonomy_snapshot_current(snap, v.ref, settings)
-    for changed in ({"v1_fallback": False}, {"fallback_extraction_entry_id": "other-extractor"}, {"pipeline": "shadow"}):
+    for changed in ({"v1_fallback": True}, {"fallback_extraction_entry_id": "other-extractor"}, {"pipeline": "shadow"}):
         assert not signals.signal_taxonomy_snapshot_current(snap, v.ref, signals.SignalSettings(**{**settings.model_dump(), **changed})), changed
     assert not signals.signal_taxonomy_snapshot_current(snap, contents.SignalTaxonomyRef(version=3, digest=v.digest), settings)
     preview = signals.SignalTaxonomySnapshotContent(source="preview", taxonomy_ref={"version": None, "digest": v.digest}, taxonomy=t, settings=settings, preview_id="prv_1")
@@ -2092,7 +2092,7 @@ def test_signal_taxonomy_versions_and_snapshots_are_digest_checked():
     with pytest.raises(ValidationError, match="redaction"):
         signals.SignalTaxonomyVersion(**{**v.model_dump(), "redacted_at": NOW})
     settings = signals.SignalSettings()
-    assert (settings.pipeline, settings.v1_fallback, settings.fallback_extraction_entry_id) == ("v1", True, None)
+    assert (settings.pipeline, settings.v1_fallback, settings.fallback_extraction_entry_id) == ("v2", False, None)
     published = signals.SignalTaxonomySnapshotContent(source="published", taxonomy_ref=v.ref, taxonomy=t, settings=settings)
     signals.SignalTaxonomySnapshotContent(source="preview", taxonomy_ref={"version": None, "digest": signals.taxonomy_digest(t)}, taxonomy=t, settings=settings, preview_id="prv_1")
     for bad in (dict(source="preview"), dict(preview_id="prv_1"), dict(taxonomy_ref={"version": None, "digest": v.digest}), dict(taxonomy_ref={"version": 2, "digest": D0})):

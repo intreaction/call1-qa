@@ -3729,6 +3729,17 @@
             "description": "The machine version the decisions below were made against.",
             "title": "Reviewed Evaluation Version"
           },
+          "reviewed_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewedScore"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Score after the latest override per criterion of the current evaluation. Absent for stale decisions or no overrides; never changes the immutable machine scorecard."
+          },
           "reviewer_notes": {
             "anyOf": [
               {
@@ -3761,6 +3772,7 @@
           "escalation_resolved_at",
           "reviewer_notes",
           "overrides",
+          "reviewed_score",
           "retained_by_account_id",
           "retained_at",
           "updated_at"
@@ -5603,7 +5615,7 @@
             "type": "integer"
           },
           "max_extraction_spans_per_call": {
-            "default": 24,
+            "default": 64,
             "description": "Spans stage 3 extracts per call; spans past the cap stay categorized without fields and the result is partial (extraction_cap).",
             "minimum": 1.0,
             "title": "Max Extraction Spans Per Call",
@@ -16613,6 +16625,44 @@
         "title": "ReviewWriteResult",
         "type": "object"
       },
+      "ReviewedScore": {
+        "additionalProperties": false,
+        "description": "Current-version reviewer decisions applied to the pinned rubric; machine artifacts remain unchanged.",
+        "properties": {
+          "critical_failure": {
+            "title": "Critical Failure",
+            "type": "boolean"
+          },
+          "evaluation_version": {
+            "minimum": 1.0,
+            "title": "Evaluation Version",
+            "type": "integer"
+          },
+          "overall_score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Overall Score",
+            "type": "number"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "requires_human_review": {
+            "title": "Requires Human Review",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "evaluation_version",
+          "overall_score",
+          "passed",
+          "critical_failure",
+          "requires_human_review"
+        ],
+        "title": "ReviewedScore",
+        "type": "object"
+      },
       "ReviewerAccount": {
         "additionalProperties": false,
         "properties": {
@@ -23306,6 +23356,37 @@
             "title": "Subcategory Share",
             "type": "number"
           },
+          "system_one_fallback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why Laya could not score the candidate; Gemma must confirm it."
+          },
+          "system_one_kept": {
+            "default": false,
+            "description": "Laya and strong semantic category/subcategory agreement allowed this span to bypass Gemma confirmation.",
+            "title": "System One Kept",
+            "type": "boolean"
+          },
+          "system_one_score": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional Laya category score, not a calibrated accuracy probability.",
+            "title": "System One Score"
+          },
           "threshold": {
             "maximum": 1.0,
             "minimum": 0.0,
@@ -23328,7 +23409,10 @@
           "neighbours",
           "subcategory_id",
           "subcategory_share",
-          "check"
+          "check",
+          "system_one_score",
+          "system_one_kept",
+          "system_one_fallback"
         ],
         "title": "SignalRuleDecision",
         "type": "object"
@@ -23825,8 +23909,8 @@
             "title": "Fallback Extraction Entry Id"
           },
           "pipeline": {
-            "default": "v1",
-            "description": "v1: today's passes (Store still projects v1 hits). shadow: v1 publishes and every v1 publish gets a companion v2 compare request. v2: new calls and reanalysis run v2.",
+            "default": "v2",
+            "description": "v2 is the current process for new calls and reanalysis. v1 and shadow remain readable for historical snapshots.",
             "enum": [
               "v1",
               "shadow",
@@ -23836,8 +23920,8 @@
             "type": "string"
           },
           "v1_fallback": {
-            "default": true,
-            "description": "v2 selected but no usable stage-1/stage-2 entry on the host: build v1, labelled with pipeline_note. Otherwise the merge records configuration_error.",
+            "default": false,
+            "description": "Legacy/fake planner compatibility: permits v1 when no usable v2 entries exist, labelled with pipeline_note. The real semantic/Laya/Gemma process never downgrades to v1.",
             "title": "V1 Fallback",
             "type": "boolean"
           }
@@ -23879,8 +23963,8 @@
             "title": "Fallback Extraction Entry Id"
           },
           "pipeline": {
-            "default": "v1",
-            "description": "v1: today's passes (Store still projects v1 hits). shadow: v1 publishes and every v1 publish gets a companion v2 compare request. v2: new calls and reanalysis run v2.",
+            "default": "v2",
+            "description": "v2 is the current process for new calls and reanalysis. v1 and shadow remain readable for historical snapshots.",
             "enum": [
               "v1",
               "shadow",
@@ -23890,8 +23974,8 @@
             "type": "string"
           },
           "v1_fallback": {
-            "default": true,
-            "description": "v2 selected but no usable stage-1/stage-2 entry on the host: build v1, labelled with pipeline_note. Otherwise the merge records configuration_error.",
+            "default": false,
+            "description": "Legacy/fake planner compatibility: permits v1 when no usable v2 entries exist, labelled with pipeline_note. The real semantic/Laya/Gemma process never downgrades to v1.",
             "title": "V1 Fallback",
             "type": "boolean"
           }
@@ -23927,8 +24011,8 @@
             "title": "Fallback Extraction Entry Id"
           },
           "pipeline": {
-            "default": "v1",
-            "description": "v1: today's passes (Store still projects v1 hits). shadow: v1 publishes and every v1 publish gets a companion v2 compare request. v2: new calls and reanalysis run v2.",
+            "default": "v2",
+            "description": "v2 is the current process for new calls and reanalysis. v1 and shadow remain readable for historical snapshots.",
             "enum": [
               "v1",
               "shadow",
@@ -23938,8 +24022,8 @@
             "type": "string"
           },
           "v1_fallback": {
-            "default": true,
-            "description": "v2 selected but no usable stage-1/stage-2 entry on the host: build v1, labelled with pipeline_note. Otherwise the merge records configuration_error.",
+            "default": false,
+            "description": "Legacy/fake planner compatibility: permits v1 when no usable v2 entries exist, labelled with pipeline_note. The real semantic/Laya/Gemma process never downgrades to v1.",
             "title": "V1 Fallback",
             "type": "boolean"
           }
@@ -51529,7 +51613,7 @@
       "max_active_subcategories": 12,
       "max_claim_batch": 16,
       "max_custom_signal_categories": 8,
-      "max_extraction_spans_per_call": 24,
+      "max_extraction_spans_per_call": 64,
       "max_fields_per_path": 12,
       "max_option_gloss_chars": 40,
       "max_signal_alert_rules": 50,

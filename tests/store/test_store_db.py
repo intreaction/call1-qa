@@ -145,3 +145,25 @@ def test_timestamps_round_trip_as_fixed_width_utc(clock):
     assert text == "2026-09-25T12:00:00.000000Z" and db.parse_ts(text) == now
     with pytest.raises(ValueError):
         db.ts(now.replace(tzinfo=None))
+
+
+def test_current_signal_pipeline_migrates_settings_without_rewriting_taxonomy(tmp_path):
+    migrations = tmp_path / "pre_cascade"
+    migrations.mkdir()
+    for source in MIGRATIONS_DIR.glob("*.sql"):
+        if int(source.name[:3]) < 45:
+            shutil.copy(source, migrations / source.name)
+    database = Database(tmp_path / "store.db")
+    database.initialize(migrations)
+    with database.connection() as conn:
+        before = [tuple(row) for row in conn.execute("SELECT * FROM results_signal_taxonomy_versions")]
+        conn.execute("UPDATE results_signal_taxonomy SET settings_json = ?", (db.dumps({
+            "pipeline": "shadow", "v1_fallback": True, "fallback_extraction_entry_id": "custom-extractor", "detection": "rules"
+        }),))
+    assert database.initialize() == [45]
+    with database.connection() as conn:
+        settings = db.loads(conn.execute("SELECT settings_json FROM results_signal_taxonomy").fetchone()[0])
+        assert settings == {"pipeline": "v2", "v1_fallback": False,
+                            "fallback_extraction_entry_id": "custom-extractor", "detection": "rules"}
+        assert [tuple(row) for row in conn.execute("SELECT * FROM results_signal_taxonomy_versions")] == before
+    assert database.initialize() == []

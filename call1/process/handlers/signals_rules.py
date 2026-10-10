@@ -48,9 +48,9 @@ from call1.contracts.contents import (
     short_digest,
 )
 from call1.contracts.errors import JobErrorCode
-from call1.contracts.signals import SignalKnnSettings, SignalRulesConfig, rules_categories
+from call1.contracts.signals import SignalKnnSettings, SignalRecipe, SignalRulesConfig, rules_categories
 from call1.pipeline import signal_rules as engine_rules
-from call1.pipeline.signals_v2 import ChoiceRow, RowBudget, SegmentClassifier
+from call1.pipeline.signals_v2 import ChoiceRow, EngineError, RowBudget, SegmentClassifier
 
 from .base import HandlerError, HandlerJob
 
@@ -178,6 +178,15 @@ def maybe_rules_engine(job: HandlerJob, ctx, engine: Optional[SegmentClassifier]
     """``engine`` unchanged unless rules detection decides at least one category; then the
     ``RulesClassifier`` around it."""
     categories = active_rules(ctx)
+    if getattr(engine, "semantic_candidates", False):
+        # A category without a semantic recipe still goes through similarity. This runtime
+        # policy is versioned in the cascade provenance; it does not edit the pinned taxonomy.
+        categories = [c if c.recipe is not None and c.recipe.engine == "rules" else
+                      c.model_copy(update={"recipe": SignalRecipe(engine="rules", threshold=.5, check="gemma")})
+                      for c in ctx.taxonomy.categories if c.active]
+        if not categories:
+            return engine
+        return SemanticSystemOneClassifier(job, ctx, engine, device=device, categories=categories)
     if not categories:
         return engine
     return RulesClassifier(job, ctx, engine, device=device, categories=categories)
@@ -365,6 +374,86 @@ class RulesClassifier:
         return SignalCategoriesContent.model_validate(data)
 
 
+class SemanticSystemOneClassifier(RulesClassifier):
+    """Semantic recipes propose candidates; Laya triages; Gemma confirms uncertainty.
+
+    A shortcut needs every segment's Laya score >= .95, category vote >= .8, a real
+    subcategory with >= .8 vote and a positive matching neighbour cosine >= .75.
+    These are conservative, unfitted thresholds, not a promise of accuracy. A low score
+    never vetoes a semantic candidate. Overflow/provider failures route to Gemma too.
+    Categories without semantic recipes get a .5 semantic-share proposal threshold.
+    """
+    LAYA_KEEP = .95
+    SEMANTIC_SHARE = .8
+    SEMANTIC_COSINE = .75
+    requires_exact_revision = True
+    FALLBACK_CODES = {"context_limit_exceeded", "provider_error", "provider_timeout", "model_unavailable", "validation_rejected"}
+
+    def __init__(self, job, ctx, laya, *, device, categories):
+        super().__init__(job, ctx, laya, device=device, categories=categories)
+        self.entry_id = laya.entry_id
+        self.budget = RowBudget(max_len=8192, head_tokens=1024, count_tokens=lambda text: len(text.encode("utf-8")))
+        self.stage1_template = "semantic-laya.v1:" + short_digest(canonical_digest({"laya": laya.stage1_template,
+                                                                                "semantic": self.stage1_template}))
+        self.calibration_id = "semantic-laya-unfitted-v1:" + short_digest(canonical_digest({"semantic": self.calibration_id,
+            "keep": self.LAYA_KEEP, "share": self.SEMANTIC_SHARE, "cosine": self.SEMANTIC_COSINE}))
+        self.scores = {}
+        self.failures = {}
+
+    @property
+    def model_revision(self):
+        return self.gemma.model_revision
+
+    def choose(self, rows):
+        answers = super().choose(rows)
+        candidates = []
+        for row, answer in zip(rows, answers):
+            options = tuple((key, gloss) for key, gloss in row.options
+                            if key == SIGNAL_NONE_OPTION or (key in self.rules_ids and answer.get(key, 0) >= .5))
+            if len(options) > 1:
+                candidates.append(ChoiceRow(row.key, row.question, options, row.state, row.truncated))
+        for row in candidates:
+            self.job.check_cancelled()
+            try:
+                if not self._gemma_loaded:
+                    self.gemma.load()
+                    self._gemma_loaded = True
+                answer = self.gemma.choose([row])[0]
+                for key, _ in row.options:
+                    if key != SIGNAL_NONE_OPTION:
+                        self.scores[(int(row.key), key)] = answer[key]
+            except EngineError as exc:
+                if exc.code not in self.FALLBACK_CODES:
+                    raise
+                for key, _ in row.options:
+                    if key != SIGNAL_NONE_OPTION:
+                        self.failures[(int(row.key), key)] = JobErrorCode(exc.code)
+        # Preserve semantic candidates, including Laya's low scores, for Gemma to decide.
+        return answers
+
+    def finish(self, content):
+        content = super().finish(content)
+        spans = {s.span_key: s for s in content.spans}
+        decisions = []
+        for decision in content.rule_decisions:
+            span = spans[decision.span_key]
+            members = [s.index for s in content.segments if s.turn_id == span.turn_id and s.block == span.block
+                       and span.first_window <= s.window <= span.last_window]
+            scores = [self.scores.get((i, decision.category_id)) for i in members]
+            failure = next((self.failures[(i, decision.category_id)] for i in members
+                            if (i, decision.category_id) in self.failures), None)
+            score = min(scores) if scores and all(value is not None for value in scores) else None
+            matching = [n.cosine for n in decision.neighbours if n.carries_category]
+            kept = (failure is None and score is not None and score >= self.LAYA_KEEP
+                    and decision.knn_share >= self.SEMANTIC_SHARE and decision.subcategory_id is not None
+                    and decision.subcategory_share >= self.SEMANTIC_SHARE
+                    and bool(matching) and max(matching) >= self.SEMANTIC_COSINE)
+            decisions.append(decision.model_copy(update={"check": not kept, "system_one_score": score,
+                                                        "system_one_kept": kept, "system_one_fallback": failure}))
+        rules = content.rules.model_copy(update={"checked_categories": sorted({d.category_id for d in decisions if d.check})})
+        return content.model_copy(update={"rule_decisions": decisions, "rules": rules})
+
+
 def _empty_mps_cache() -> None:
     try:  # pragma: no cover - only with torch on MPS
         import sys
@@ -389,7 +478,10 @@ def rules_ready(job: HandlerJob) -> None:
         snapshot = item.content()
     except Exception:  # the stage itself reports an unreadable input
         return
-    if not rules_categories(snapshot.taxonomy, snapshot.settings):
+    from call1.process.system_one import ENTRY_ID
+
+    cascade = job.catalog_entry is not None and job.catalog_entry.entry_id == ENTRY_ID
+    if not rules_categories(snapshot.taxonomy, snapshot.settings) and not (cascade and any(c.active for c in snapshot.taxonomy.categories)):
         return
     if embedding.configured_backend("real") != "fake" and not embedding.weights_installed():
         raise ReleaseJob("reject", JobErrorCode.MODEL_UNAVAILABLE, "rules detection needs the search embedding weights on this host")

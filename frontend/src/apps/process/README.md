@@ -99,7 +99,11 @@ server proxies `/process` to `127.0.0.1:8020` for when one is added. In the mean
   stage to inspect its catalog entries, status, runtime, license, and installed adapter scope.
   **Fine-tuning settings** opens Settings. In demo mode, applicable text stages also show the
   simulated Call1 + private stack, labelled separately from the actual installed model.
-- **Settings** (`views/SettingsView.tsx`) — model choice and on-device training. Outside demo mode,
+- **Settings** (`views/SettingsView.tsx`) — model choice and on-device training.
+  **Contact Signals pipeline** (`components/SignalPipelineStatus.tsx`) shows the default semantic
+  similarity → Laya → Gemma flow and endpoint readiness. High Laya scores need strong semantic
+  category/subcategory agreement to bypass Gemma confirmation; every uncertain candidate is confirmed.
+  `/signals/first-pass` is a read-only status API. Existing results require reanalysis.
   **Processing model** (`components/ModelPicker.tsx`) selects the Gemma base or any kept installed
   or trained adapter through `POST /process/api/training/active`; requires the console token,
   blocks during training, and persists across reloads. Existing results require reanalysis.

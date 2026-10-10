@@ -110,6 +110,10 @@ def entry_status(entry: CatalogEntry) -> Tuple[CatalogEntryStatus, List[ModelPur
     purposes = list(entry.purposes)
     if not entry.supported:
         return CatalogEntryStatus.UNQUALIFIED, []
+    if entry.endpoint_url is not None:
+        from call1.process.system_one import entry_status as system_one_status
+
+        return system_one_status(entry)
     if entry.runtime == "code" or entry.model_directory is None:
         return CatalogEntryStatus.AVAILABLE, purposes
     if entry.runtime == "torch":
@@ -142,6 +146,10 @@ def entry_status(entry: CatalogEntry) -> Tuple[CatalogEntryStatus, List[ModelPur
 
 def entry_detail(entry: CatalogEntry) -> Optional[str]:
     """Why an entry is not installed here, naming the missing file (the console's ``detail``), or None."""
+    if entry.endpoint_url is not None:
+        from call1.process.system_one import entry_problem
+
+        return entry_problem(entry)
     path = weights_path(entry)
     if path is None:
         return None

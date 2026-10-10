@@ -76,7 +76,8 @@ class ProcessRuntime:
         if client is None and config.store_url:
             client = StoreClient(config.store_url, config.service_key, http=http)
         self.client = client
-        catalog = seeded_catalog(mode=config.handlers, overrides=config.model_defaults)
+        catalog = seeded_catalog(mode=config.handlers, overrides=config.model_defaults,
+                                 system_one_url=config.system_one_url, system_one_model=config.system_one_model)
         self.registry = registry or build_registry(config.handlers, config=config, catalog=catalog, fake_behavior=fake_behavior)
         if self.registry.entry_status is not None:
             catalog = catalog.with_status(self.registry.entry_status, getattr(self.registry, "entry_detail", None))
@@ -161,7 +162,16 @@ class ProcessRuntime:
         self.catalog_published = {"catalog_version": snapshot.catalog_version, "published_at": snapshot.published_at.isoformat()}
         return self.catalog_published
 
-    # --- background --------------------------------------------------------------------------
+    def signal_first_pass(self) -> dict:
+        from call1.contracts.catalog import ModelPurpose
+        from .system_one import ENTRY_ID, entry_problem
+
+        entry = self.catalog.entries.get(ENTRY_ID)
+        problem = entry_problem(entry) if entry is not None else "Laya is available only with real handlers"
+        return {"engine": "semantic-laya-gemma" if self.catalog.defaults.get(ModelPurpose.SIGNAL_CATEGORY) == ENTRY_ID else "fake",
+                "available": problem is None, "reason": problem, "model": self.config.system_one_model,
+                "endpoint": self.config.system_one_url, "experimental": True}
+
 
     def start(self) -> None:
         if not self.config.configured:

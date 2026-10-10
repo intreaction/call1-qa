@@ -419,12 +419,20 @@ export function fmt2(n: number): string {
   return (Math.round(n * 100) / 100).toFixed(2);
 }
 
+/** System One metadata distinguishes the semantic cascade from historical rule decisions. */
+export function isSemanticDecision(why: SignalHitWhy): boolean {
+  const rule = why.rule;
+  return why.category_source === 'rules' && rule != null &&
+    (rule.system_one_score != null || rule.system_one_fallback != null || rule.system_one_kept === true);
+}
+
 /** The compact "why" line: "Found by rules · score 0.62 ≥ 0.38 · similar examples 0.55 · phrase
  * 'refund' (matched)", or "Found by Gemma". */
 export function whySummary(why: SignalHitWhy, phrase: string | null): string {
   if (why.category_source !== 'rules' || !why.rule) return 'Found by Gemma';
   const r = why.rule;
-  const parts = [`Found by rules`, `score ${fmt2(r.score)} ≥ ${fmt2(r.threshold)}`, `similar examples ${fmt2(r.knn_share)}`];
+  const semantic = isSemanticDecision(why);
+  const parts = [semantic ? 'Found by semantic similarity' : 'Found by rules', `score ${fmt2(r.score)} ≥ ${fmt2(r.threshold)}`, `similar examples ${fmt2(r.knn_share)}`];
   if (r.lexicon_match) {
     const shown = phrase ? ` '${phrase.length > 40 ? `${phrase.slice(0, 39)}…` : phrase}'` : r.lexicon_phrase !== null ? ` ${r.lexicon_phrase + 1}` : '';
     parts.push(`phrase${shown} (matched${r.lexicon_weight > 0 ? `, +${fmt2(r.lexicon_weight)}` : ''})`);

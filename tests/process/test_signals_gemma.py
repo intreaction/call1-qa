@@ -163,6 +163,23 @@ def test_invalid_answers_are_validation_rejected(engine, reply, rows):
     assert raised.value.code == JobErrorCode.VALIDATION_REJECTED.value
 
 
+@pytest.mark.parametrize("speech_act, fits, accepted", [
+    ("background", "yes", False),
+    ("answer", "yes", False),
+    ("acknowledgement", "yes", False),
+    ("repeat", "yes", False),
+    (None, "yes", False),  # missing speech-act decision fails closed
+    ("request", "yes", True),
+    ("request", "no", False),
+])
+def test_objective_acceptance_requires_a_consistent_model_assessment(speech_act, fits, accepted):
+    row = ChoiceRow(key="intent.t1b0", question="Is this a new caller objective?",
+                    options=STAGE2_OPTIONS, state={})
+    scores = GemmaSegmentClassifier._scores(row, {"assessment": "The speaker discusses a product.",
+                                                 "objective_status": "new_request", "speech_act": speech_act, "fits": fits, "choice": "price"}, True)
+    assert (scores[SIGNAL_NOT_OPTION] < 0.5) is accepted
+
+
 def test_cancellation_between_batches_stops_before_the_next_prompt(engine):
     holder = {}
     classifier, stub, job = engine(after=lambda n: job_cancel(holder["job"]) if n == 1 else None, budget=1000)
@@ -190,3 +207,61 @@ def test_signal_batches_are_not_clamped_to_the_qa_answer_limit(engine):
     assert classifier.transport.model.max_tokens >= 4096
     from call1.process.handlers.real.llm import LlmTransport
     assert LlmTransport(classifier.job).model.max_tokens < 4096  # QA keeps its own limit
+
+
+@pytest.mark.parametrize("objective_status", ["answer_or_fact", "repeat", "conversation_management", "unclear", None])
+def test_request_speech_act_does_not_override_non_new_objective_assessment(objective_status):
+    from call1.pipeline.signals_v2 import ChoiceRow
+    row = ChoiceRow("intent.t1b0", "What objective?", (("price", "Price"), ("other", "Other"), ("not", "Not")),
+                    {"speaker": "caller", "turn": "Pink, please.", "previous": []})
+    scores = GemmaSegmentClassifier._scores(row, {"assessment": "A detail or repeated request.", "objective_status": objective_status,
+                                                 "speech_act": "request", "fits": "yes", "choice": "price"}, True)
+    assert scores["not"] == .9 and scores["price"] == 0
+
+
+def test_objective_confirmation_does_not_borrow_requests_from_next_segment():
+    from call1.process.handlers.real.signals_v2 import _stage2_item
+    row = ChoiceRow("intent.t44b0", "What objective?", (("price", "Price"), ("other", "Other"), ("not", "Not")),
+                    {"speaker": "caller", "turn": "Um, I think I want to go from some", "previous": [],
+                     "next": "caller: Sorry, I want figurines for the Christmas tree."})
+    assert "next" not in _stage2_item(row)
+    other = ChoiceRow("issue.t44b0", row.question, row.options, row.state)
+    assert _stage2_item(other)["next"] == row.state["next"]
+
+
+def test_objective_status_is_generated_before_a_free_text_assessment():
+    from call1.process.handlers.real.signals_v2 import render_batch
+    row = ChoiceRow("intent.t8b0", "What objective?", STAGE2_OPTIONS,
+                    {"speaker": "caller", "turn": "I saw your new collection.", "previous": []})
+    _, _, schema, _ = render_batch([row], True)
+    assert list(schema["properties"][row.key]["properties"])[:2] == ["objective_status", "speech_act"]
+    assert schema["properties"][row.key]["required"][:2] == ["objective_status", "speech_act"]
+
+
+def test_objective_gate_excludes_topics_and_context_before_rejecting_statements(engine):
+    from call1.process.handlers.real.signals_v2 import render_objective_gate
+    row = ChoiceRow("intent.t8b0", "What objective?", STAGE2_OPTIONS,
+                    {"speaker": "caller", "turn": "I saw your collection.",
+                     "previous": [{"speaker": "caller", "text": "Can you check availability?"}]})
+    _, user, _, _ = render_objective_gate([row])
+    assert json.loads(user) == {"targets": [{"id": row.key, "target": "I saw your collection."}]}
+    for form in ("fact", "caller_plan", "caller_desire_or_reason", "preference_or_answer", "conversation_or_fragment"):
+        classifier, stub, _ = engine(reply=json.dumps({row.key: {"form": form}}))
+        [scores] = classifier.choose([row])
+        assert scores[SIGNAL_NOT_OPTION] == .9
+        assert len(stub.calls) == 1  # rejected before the topic prompt
+
+
+def test_direct_request_gate_then_contextual_subcategory_confirmation(engine):
+    row = ChoiceRow("intent.t8b0", "What objective?", STAGE2_OPTIONS,
+                    {"speaker": "caller", "turn": "Can you check the price?", "previous": []})
+    def reply(schema):
+        if "form" in schema["properties"][row.key]["properties"]:
+            answer = {"form": "question"}
+        else:
+            answer = {"objective_status": "new_request", "speech_act": "request", "assessment": "Asks the price.",
+                      "fits": "yes", "choice": "price"}
+        return json.dumps({row.key: answer})
+    classifier, stub, _ = engine(reply=reply)
+    [scores] = classifier.choose([row])
+    assert scores["price"] == .9 and len(stub.calls) == 2

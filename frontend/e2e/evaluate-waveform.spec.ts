@@ -11,6 +11,38 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+import { COUNT, speakerTimeline } from '../src/apps/evaluate/components/threadWaveformGl';
+
+test('speaker coloring preserves gaps, overlaps and half-open turn boundaries', () => {
+  const data = speakerTimeline([
+    { start: 1, end: 4, speaker: 'AGENT' },
+    { start: 3, end: 6, speaker: 'CALLER' },
+    { start: 7, end: 8, speaker: 'UNKNOWN' },
+    { start: 9, end: 9, speaker: 'AGENT' },
+  ], COUNT, 1);
+  const at = (i: number) => Array.from(data.slice(i * 4, i * 4 + 2));
+  expect(at(0)).toEqual([0, 0]);
+  expect(at(1)).toEqual([85, 85]);
+  expect(at(3)).toEqual([255, 255]);
+  expect(at(4)).toEqual([170, 170]);
+  expect(at(6)).toEqual([0, 0]);
+  expect(at(7)).toEqual([0, 0]);
+  expect(at(9)).toEqual([0, 0]);
+});
+
+test('speaker coloring respects stereo channel evidence and clears missing or invalid timing', () => {
+  const data = speakerTimeline([
+    { start: -1, end: 2, speaker: 'CALLER', channel: 0 },
+    { start: 0, end: 2, speaker: 'AGENT', channel: 1 },
+    { start: 3, end: 6, speaker: 'AGENT' }, // No channel evidence: do not guess.
+    { start: NaN, end: 6, speaker: 'CALLER', channel: 0 },
+    { start: 8, end: 7, speaker: 'AGENT', channel: 1 },
+  ], COUNT, 2);
+  expect(Array.from(data.slice(0, 2))).toEqual([170, 85]);
+  expect(Array.from(data.slice(2 * 4, 6 * 4))).toEqual(new Array(16).fill(0));
+  expect(speakerTimeline([], COUNT, 1).every((v) => v === 0)).toBe(true);
+  expect(speakerTimeline([{ start: 0, end: 9, speaker: 'AGENT' }], NaN, 1).every((v) => v === 0)).toBe(true);
+});
 
 const audioState = (page: Page) =>
   page.evaluate(() => {

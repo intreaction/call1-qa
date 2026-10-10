@@ -10,14 +10,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   ArrowLeft,
   CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Pause,
   Play,
   RefreshCw,
   ShieldAlert,
-  Sparkles,
 } from 'lucide-react';
 import {
   agentLabel,
@@ -40,6 +43,7 @@ import {
   hitSubcategoryName,
   signalFamily,
   type CallDetail,
+  type EvaluationView,
   type ContactSignalView,
   type CallReviewState,
   type OverrideReasonCode,
@@ -55,6 +59,7 @@ import {
 import {
   Button,
   Card,
+  Dialog,
   EmptyState,
   ErrorNotice,
   Field,
@@ -73,6 +78,7 @@ import { failureReason, isRecordingRejected } from '../components/failureText';
 import { usePollChanges } from '../state/app';
 import type { WorkbenchViewProps } from './types';
 import { ContactSignalsSection } from './workbench/ContactSignalsSection';
+import { ScorecardPopout } from './workbench/ScorecardPopout';
 
 function clock(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '0:00';
@@ -152,6 +158,15 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
   const [playing, setPlaying] = useState(false);
   const [audioError, setAudioError] = useState(false);
   const [activeTurnId, setActiveTurnId] = useState<number | null>(null);
+  const [jumpTurnId, setJumpTurnId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (jumpTurnId === null) return;
+    const el = document.getElementById(`workbench-turn-${jumpTurnId}`);
+    el?.focus({ preventScroll: true });
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setJumpTurnId(null);
+  }, [jumpTurnId]);
 
   const callQuery = useQuery({
     queryKey: queryKeys.call(callId),
@@ -274,7 +289,7 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
       if (!v.quoted_evidence) continue;
       const time = v.timestamp_range?.[0] ?? turns.find((t) => t.turn_id === v.quote_turn_id)?.start_time;
       if (time == null) continue;
-      const override = review?.overrides.find((o) => o.criterion_id === v.criterion_id);
+      const override = review?.overrides.filter((o) => o.criterion_id === v.criterion_id && o.evaluation_version === call?.evaluation?.version).slice(-1)[0];
       const d = verdictStatusDisplay(override?.status ?? v.status);
       out.push({
         id: `evidence-${v.criterion_id}`,
@@ -320,8 +335,9 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
     const turn = turnId != null ? turns.find((t) => t.turn_id === turnId) : undefined;
     if (turn) seekTo(turn.start_time);
     else if (timeHint != null) seekTo(timeHint);
-    const el = document.getElementById(`workbench-turn-${turnId}`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (turn) {
+      setJumpTurnId(turn.turn_id);
+    }
   };
 
   useEffect(() => {
@@ -361,12 +377,14 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
   // one agent's calls apart; the agent label is the fallback and otherwise the secondary line.
   const objective = callObjective(contactQuery.data?.signals);
   const agent = agentLabel(call.call.agent_id, call.call.agent_display_name, call.call.agent_extension);
+  const currentReviewScore = review?.reviewed_score?.evaluation_version === call.evaluation?.version ? review?.reviewed_score : undefined;
 
   const badge = callQaBadge({
     qa_state: call.results.find((r) => r.kind === 'qa')?.state ?? 'disabled',
-    overall_score: call.evaluation?.overall_score ?? null,
-    passed: call.evaluation?.passed ?? null,
-    critical_failure: call.evaluation?.critical_failure ?? null,
+    overall_score: currentReviewScore?.overall_score ?? call.evaluation?.overall_score ?? null,
+    passed: currentReviewScore?.passed ?? call.evaluation?.passed ?? null,
+    critical_failure: currentReviewScore?.critical_failure ?? call.evaluation?.critical_failure ?? null,
+    requires_human_review: currentReviewScore?.requires_human_review ?? call.evaluation?.requires_human_review ?? false,
   });
 
   return (
@@ -389,7 +407,7 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <StatusPill tone={badge.tone} title={badge.description}>
             {badge.label}
             {badge.score !== null && ` · ${formatScore(badge.score)}`}
@@ -397,6 +415,7 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
           <Button icon={ArrowLeft} onClick={() => navigate({ name: 'calls' })}>
             All calls
           </Button>
+          <ReanalysisMenu client={client} callId={callId} session={session} onWrote={() => pollNow()} />
         </div>
       </div>
 
@@ -493,9 +512,11 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
         {!session.can('play_audio') && <p className="text-xs text-fg-muted mt-2">Your role does not include audio playback.</p>}
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
-        <div className="space-y-4 min-w-0">
+      <div data-testid="workbench-dashboard" className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[calc(100dvh-28rem)] lg:min-h-[24rem] lg:grid-rows-2 [&>div]:min-h-0 [&>div]:min-w-0 [&>div>section]:h-full [&>div>section]:flex [&>div>section]:flex-col [&>div>section>header]:shrink-0 [&>div>section>div]:min-h-0 [&>div>section>div]:overflow-y-auto [&>div>section>div]:overscroll-contain [&>div>section>div]:flex-1">
+        <div className="h-80 lg:h-auto">
           <SummarySection group={summaryGroup} transcriptGroup={transcriptGroup} query={summaryQuery} onJump={jumpToTurn} />
+        </div>
+        <div className="h-80 lg:h-auto">
           <TranscriptSection
             group={transcriptGroup}
             query={transcriptQuery}
@@ -511,6 +532,8 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
               pollNow();
             }}
           />
+        </div>
+        <div className="h-80 lg:h-auto">
           <ContactSignalsSection
             client={client}
             session={session}
@@ -526,8 +549,7 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
             }}
           />
         </div>
-
-        <div className="space-y-4 min-w-0">
+        <div className="h-80 lg:h-auto">
           <ScorecardSection
             call={call}
             review={review}
@@ -543,7 +565,6 @@ export default function WorkbenchView({ callId, turn: initialTurn, client, sessi
               pollNow();
             }}
           />
-          <ReanalysisSection client={client} callId={callId} session={session} onWrote={() => pollNow()} />
         </div>
       </div>
     </div>
@@ -626,7 +647,7 @@ function TranscriptSection({
       ) : (
         <>
           <VocabularyCorrectionNotice correction={vocabularyCorrection} />
-          <div className="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
+          <div className="space-y-2">
             {turns.map((turn) => {
               const tone = toneByTurn.get(turn.turn_id);
               const isAgent = turn.speaker === 'AGENT';
@@ -634,6 +655,7 @@ function TranscriptSection({
                 <div
                   key={turn.turn_id}
                   id={`workbench-turn-${turn.turn_id}`}
+                  tabIndex={-1}
                   className={`rounded-md border p-2.5 text-sm transition-colors ${
                     activeTurnId === turn.turn_id ? 'border-primer-blueBorder bg-primer-blueSubtle' : 'border-border-muted bg-canvas'
                   }`}
@@ -802,7 +824,7 @@ function SummarySection({
 
 function ScorecardSection({
   call,
-  review,
+  review: latestReview,
   reviewLoading,
   reviewError,
   client,
@@ -821,11 +843,47 @@ function ScorecardSection({
   onJump: (turnId: number | null | undefined, timeHint?: number | null) => void;
   onWrote: () => void;
 }) {
-  const evaluation = call.evaluation;
+  const latestEvaluation = call.evaluation;
+  const [selectedRubricId, setSelectedRubricId] = useState<string | null>(null);
+  // Existing immutable evaluation-version reads let us show real rubric applications without
+  // rerunning the call. Keep the most recent application of each distinct rubric.
+  const historyQuery = useQuery({
+    queryKey: [...queryKeys.call(callId), 'rubric-assessments', latestEvaluation?.version],
+    enabled: !!latestEvaluation && latestEvaluation.version > 1,
+    staleTime: Infinity,
+    queryFn: async ({ signal }) => {
+      const history: EvaluationView[] = [];
+      for (let end = latestEvaluation!.version - 1; end > 0; end -= 4) {
+        const batch = await Promise.all(Array.from({ length: Math.min(4, end) }, (_, i) =>
+          client.get('/store/v1/calls/{call_id}/evaluations/{version}', { path: { call_id: callId, version: end - i }, signal })
+            .catch(error => { if (error?.status === 404) return null; throw error; }),
+        ));
+        history.push(...batch.filter((item): item is EvaluationView => item !== null));
+      }
+      return history;
+    },
+  });
+  const assessments = useMemo(() => {
+    const byRubric = new Map<string, EvaluationView>();
+    for (const assessment of [latestEvaluation, ...(historyQuery.data ?? [])]) {
+      if (assessment && !byRubric.has(assessment.rubric.rubric_id)) byRubric.set(assessment.rubric.rubric_id, assessment);
+    }
+    return [...byRubric.values()];
+  }, [latestEvaluation, historyQuery.data]);
+  const assessmentIndex = Math.max(0, assessments.findIndex(a => a.rubric.rubric_id === selectedRubricId));
+  const machineEvaluation = assessments[assessmentIndex] ?? latestEvaluation;
+  const isCurrent = machineEvaluation?.version === latestEvaluation?.version;
+  const review = isCurrent ? latestReview : undefined;
+  const currentOverrides = new Map((review?.overrides ?? []).filter(o => o.evaluation_version === machineEvaluation?.version).map(o => [o.criterion_id, o]));
+  const reviewedScore = review?.reviewed_score?.evaluation_version === machineEvaluation?.version ? review?.reviewed_score : undefined;
+  const evaluation = machineEvaluation && reviewedScore ? {
+    ...machineEvaluation, ...reviewedScore,
+    verdicts: machineEvaluation.verdicts.map(v => ({ ...v, status: currentOverrides.get(v.criterion_id)?.status ?? v.status })),
+  } : machineEvaluation;
   const qaGroup = resultOf(call, 'qa');
-  const canOverride = session.can('override_verdict');
-  const canResolve = session.can('resolve_escalation');
-  const canRetain = session.can('retain_review');
+  const canOverride = isCurrent && session.can('override_verdict');
+  const canResolve = isCurrent && session.can('resolve_escalation');
+  const canRetain = isCurrent && session.can('retain_review');
   // Read the immutable version used for this score, never the currently active rubric.
   const scoredRubric = useQuery({
     queryKey: ['scorecard-rubric', evaluation?.rubric.rubric_id, evaluation?.rubric.rubric_version, evaluation?.rubric.digest],
@@ -838,7 +896,20 @@ function ScorecardSection({
   const rubricDefinition = scoredRubric.data?.ref.digest === evaluation?.rubric.digest ? scoredRubric.data?.definition : undefined;
   const scoredCriteria = rubricDefinition?.criteria ?? [];
   const earnedWeight = scoredCriteria.reduce((sum, criterion) => sum + (evaluation?.verdicts.find(v => v.criterion_id === criterion.criterion_id)?.status === 'PASS' ? criterion.weight : 0), 0);
-  const eligibleWeight = scoredCriteria.reduce((sum, criterion) => sum + (evaluation?.verdicts.find(v => v.criterion_id === criterion.criterion_id)?.status === 'NOT_APPLICABLE' ? 0 : criterion.weight), 0);
+  const eligibleWeight = scoredCriteria.reduce((sum, criterion) => sum + (['NOT_APPLICABLE', 'FLAGGED'].includes(evaluation?.verdicts.find(v => v.criterion_id === criterion.criterion_id)?.status ?? 'FLAGGED') ? 0 : criterion.weight), 0);
+
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState<string | null>(null);
+  const criterionAnchors = useRef(new Map<string, HTMLButtonElement>());
+  const openDetails = () => {
+    setSelectedCriterion(null);
+    setDetailsOpen(true);
+  };
+  const jumpFromDetails = (turnId: number | null | undefined, timeHint?: number | null) => {
+    setDetailsOpen(false);
+    setSelectedCriterion(null);
+    onJump(turnId, timeHint);
+  };
 
   const [overrideOpen, setOverrideOpen] = useState<string | null>(null);
   const [reasonCode, setReasonCode] = useState<OverrideReasonCode | ''>('');
@@ -846,6 +917,11 @@ function ScorecardSection({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<unknown>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  useEffect(() => {
+    setActionError(null);
+    setActionNotice(null);
+  }, [selectedCriterion]);
+
 
   const expectedVersion = review?.review_version ?? call.review_version;
 
@@ -928,12 +1004,87 @@ function ScorecardSection({
     }
   }
 
-  return (
+  const renderVerdict = (v: EvaluationView['verdicts'][number], popout = false) => {
+    const criterion = scoredCriteria.find(c => c.criterion_id === v.criterion_id);
+    const override = currentOverrides.get(v.criterion_id);
+    const effectiveStatus = override?.status ?? v.status;
+    const d = verdictStatusDisplay(effectiveStatus);
+    return (
+      <div id={`scorecard-detail-${v.criterion_id}`} key={v.criterion_id} className={`text-sm space-y-2 ${popout ? '' : 'scroll-mt-3 rounded-md border border-border-muted bg-canvas p-2.5'}`}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-medium text-fg">{popout ? 'Verdict' : v.criterion_name}</span>
+          <StatusPill tone={d.tone} title={override ? `Overridden from ${verdictStatusDisplay(override.original_status).label}` : undefined}>
+            {d.label}
+            {override && ' (overridden)'}
+          </StatusPill>
+        </div>
+        {criterion && <p className="text-xs text-fg-muted tabular-nums">{criterion.critical ? 'Critical check · ' : ''}{['NOT_APPLICABLE', 'FLAGGED'].includes(v.status) ? `${criterion.weight} weight excluded from score${v.status === 'FLAGGED' ? ' · awaiting review' : ''}` : `${v.status === 'PASS' ? criterion.weight : 0} / ${criterion.weight} weight earned`}{override ? ' · reviewed decision' : ''}</p>}
+        {override?.reviewer_notes && <p className="text-fg leading-relaxed">Review: {override.reviewer_notes}</p>}
+        <p className="text-fg-muted leading-relaxed">{override && 'Original machine assessment: '}{v.reasoning}</p>
+        {v.quoted_evidence ? (
+          <button
+            type="button"
+            onClick={() => jumpFromDetails(v.quote_turn_id, v.timestamp_range?.[0])}
+            className="block w-full text-left rounded-md bg-canvas-inset border-l-2 border-primer-blue px-3 py-2 italic text-fg hover:bg-primer-blueSubtle transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primer-blue"
+          >
+            &ldquo;{v.quoted_evidence}&rdquo;
+          </button>
+        ) : (
+          <p className="text-xs text-fg-subtle italic">No supporting quote.</p>
+        )}
+        <div className="text-xs text-fg-muted">Confidence: {Math.round(v.confidence * 100)}%</div>
+
+        {canOverride && (
+          <div className="pt-1.5 border-t border-border-muted">
+            {overrideOpen === v.criterion_id ? (
+              <div className="space-y-2">
+                <Field label="Reason code">
+                  {(id) => (
+                    <SelectInput id={id} value={reasonCode} onChange={(e) => setReasonCode(e.target.value as OverrideReasonCode)}>
+                      <option value="">No reason given</option>
+                      {OVERRIDE_REASONS.map((r) => (
+                        <option key={r} value={r}>
+                          {r.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </SelectInput>
+                  )}
+                </Field>
+                <Field label="Notes">{(id) => <TextInput id={id} value={notes} maxLength={2000} onChange={(e) => setNotes(e.target.value)} />}</Field>
+                <div className="flex gap-1.5">
+                  <Button size="sm" variant="primary" busy={busy} onClick={() => void submitOverride('PASS')}>
+                    Pass
+                  </Button>
+                  <Button size="sm" variant="danger" busy={busy} onClick={() => void submitOverride('FAIL')}>
+                    Fail
+                  </Button>
+                  <Button size="sm" busy={busy} onClick={() => void submitOverride('NOT_APPLICABLE')}>
+                    N/A
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => setOverrideOpen(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={() => openOverride(v.criterion_id)}>
+                Override
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
+  const fullScorecard = (
     <Card
-      title="Scorecard"
+      title="Assessment details"
       subtitle={evaluation ? `Rubric ${evaluation.rubric.rubric_id}${evaluation.rubric.rubric_version != null ? ` · v${evaluation.rubric.rubric_version}` : ''}` : undefined}
       right={<SectionStatePill group={qaGroup} />}
     >
+      {!isCurrent && <Notice tone="neutral">Earlier rubric application · assessment v{machineEvaluation?.version}. Review actions are available on the current assessment.</Notice>}
       {!qaGroup || qaGroup.state === 'disabled' ? (
         <EmptyState title="No scorecard requested">QA scoring has not run for this call.</EmptyState>
       ) : !evaluation && qaGroup.state === 'failed' ? (
@@ -948,11 +1099,11 @@ function ScorecardSection({
         <div className="space-y-3">
           <div className="flex items-center justify-between rounded-md border border-border-muted bg-canvas p-2.5">
             <div>
-              <div className="text-2xl font-bold text-fg tabular-nums">{formatScore(evaluation.overall_score)}</div>
-              <div className="text-xs text-fg-muted">out of 100</div>
+              <div className="text-2xl font-bold text-fg tabular-nums">{evaluation.verdicts.some(v => v.status === 'PASS' || v.status === 'FAIL') ? formatScore(evaluation.overall_score) : '—'}</div>
+              <div className="text-xs text-fg-muted">{evaluation.verdicts.some(v => v.status === 'FLAGGED') ? 'Provisional · assessed checks only' : reviewedScore ? 'Reviewed score · out of 100' : 'out of 100'}</div>
             </div>
-            <StatusPill tone={evaluation.critical_failure ? 'red' : evaluation.passed ? 'green' : 'red'}>
-              {evaluation.critical_failure ? 'Critical fail' : evaluation.passed ? 'Pass' : 'Fail'}
+            <StatusPill tone={evaluation.critical_failure ? 'red' : evaluation.requires_human_review ? 'yellow' : evaluation.passed ? 'green' : 'red'}>
+              {evaluation.critical_failure ? 'Critical fail' : evaluation.requires_human_review ? 'Needs Review' : evaluation.passed ? 'Pass' : 'Fail'}
             </StatusPill>
           </div>
 
@@ -968,13 +1119,12 @@ function ScorecardSection({
             </div>
             {rubricDefinition ? (
               <div className="space-y-1">
-                <p className="font-medium text-fg tabular-nums">{eligibleWeight > 0 ? `${earnedWeight} earned weight ÷ ${eligibleWeight} applicable weight × 100 = ${formatScore(evaluation.overall_score)}` : 'No applicable checks to score'}</p>
-                {eligibleWeight === 0 && <p className="text-fg-muted">No applicable weight remains. The recorded score is 0; this call cannot pass.</p>}
-                <p className="text-fg-muted">Passed checks earn their full weight. Failed checks and checks needing review earn no points. Not-applicable checks are excluded from the calculation.</p>
+                <p className="font-medium text-fg tabular-nums">{eligibleWeight > 0 ? `${earnedWeight} earned weight ÷ ${eligibleWeight} assessed weight × 100 = ${formatScore(evaluation.overall_score)}` : 'No assessed checks to score yet'}</p>
+                <p className="text-fg-muted">Passed checks earn their full weight. Confirmed failures earn zero. Checks needing review and not-applicable checks are excluded from the calculation.</p>
                 <p className="text-fg-muted">To pass: at least {rubricDefinition.pass_threshold || 80}/100, no critical failures, and no checks requiring human review.</p>
               </div>
             ) : (
-              <p className="text-fg-muted">Passed checks earn their weight; failed checks and checks needing review earn no points. Not-applicable checks are excluded. {scoredRubric.isFetching ? 'Loading rubric weights…' : 'The exact rubric weights are unavailable.'}</p>
+              <p className="text-fg-muted">Passed checks earn their weight; confirmed failures earn zero. Checks needing review and not-applicable checks are excluded. {scoredRubric.isFetching ? 'Loading rubric weights…' : 'The exact rubric weights are unavailable.'}</p>
             )}
             {evaluation.critical_failure && (
               <div className="border-l-2 border-primer-redBorder pl-2 text-primer-redFg">
@@ -982,8 +1132,8 @@ function ScorecardSection({
                 {scoredCriteria.filter(c => c.critical && evaluation.verdicts.some(v => v.criterion_id === c.criterion_id && v.status === 'FAIL')).map(c => <p key={c.criterion_id}>Failed critical check: {c.name}.</p>)}
               </div>
             )}
-            {evaluation.verdicts.some(v => v.status === 'FLAGGED') && <p className="text-primer-yellowFg">Checks needing review are unresolved, rather than confirmed failures. They contribute zero points to this machine score until a new evaluation is produced.</p>}
-            {!!review?.overrides.length && <p className="text-fg-muted">This is the original machine score. Reviewer overrides below are recorded separately and do not recalculate it.</p>}
+            {evaluation.verdicts.some(v => v.status === 'FLAGGED') && <p className="text-primer-yellowFg">This score is provisional. Unresolved checks do not lower it or earn passing credit. The call remains Needs Review until those checks are settled.</p>}
+            {reviewedScore && <p className="text-fg-muted">This score includes current reviewer decisions. Original machine score: {formatScore(machineEvaluation!.overall_score)}. The original assessment and review history are preserved.</p>}
           </div>
 
           {review?.staleness === 'stale' && (
@@ -1000,7 +1150,7 @@ function ScorecardSection({
           )}
           {review?.staleness === 'retained' && <Notice tone="neutral">These decisions were retained despite a newer machine version.</Notice>}
 
-          {evaluation.requires_human_review && (
+          {isCurrent && machineEvaluation?.requires_human_review && (
             <div data-testid="escalation-banner" className="flex items-center justify-between rounded-md border border-primer-yellowBorder bg-primer-yellowSubtle px-2.5 py-2">
               <span className="text-xs font-medium text-primer-yellowFg">{escalationBannerText(review?.escalation_status ?? 'PENDING')}</span>
               {canResolve && (review?.escalation_status ?? 'PENDING') === 'PENDING' && (
@@ -1026,87 +1176,79 @@ function ScorecardSection({
           )}
 
           <div className="space-y-2">
-            {evaluation.verdicts.map((v) => {
-              const criterion = scoredCriteria.find(c => c.criterion_id === v.criterion_id);
-              const override = review?.overrides.find((o) => o.criterion_id === v.criterion_id);
-              const effectiveStatus = override?.status ?? v.status;
-              const d = verdictStatusDisplay(effectiveStatus);
-              return (
-                <div key={v.criterion_id} className="rounded-md border border-border-muted bg-canvas p-2.5 text-sm space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-fg">{v.criterion_name}</span>
-                    <StatusPill tone={d.tone} title={override ? `Overridden from ${verdictStatusDisplay(v.status).label}` : undefined}>
-                      {d.label}
-                      {override && ' (overridden)'}
-                    </StatusPill>
-                  </div>
-                  {criterion && <p className="text-xs text-fg-muted tabular-nums">{criterion.critical ? 'Critical check · ' : ''}{v.status === 'NOT_APPLICABLE' ? `${criterion.weight} weight excluded from score` : `${v.status === 'PASS' ? criterion.weight : 0} / ${criterion.weight} weight earned`}{override ? ' · machine assessment' : ''}</p>}
-                  <p className="text-fg-muted leading-relaxed">{v.reasoning}</p>
-                  {v.quoted_evidence ? (
-                    <button
-                      type="button"
-                      onClick={() => onJump(v.quote_turn_id, v.timestamp_range?.[0])}
-                      className="block w-full text-left rounded bg-canvas-inset border border-primer-yellowBorder px-2 py-1.5 italic text-fg hover:border-primer-yellowFg transition-colors"
-                    >
-                      &ldquo;{v.quoted_evidence}&rdquo;
-                    </button>
-                  ) : (
-                    <p className="text-xs text-fg-subtle italic">No supporting quote.</p>
-                  )}
-                  <div className="text-xs text-fg-muted">Confidence: {Math.round(v.confidence * 100)}%</div>
-
-                  {canOverride && (
-                    <div className="pt-1.5 border-t border-border-muted">
-                      {overrideOpen === v.criterion_id ? (
-                        <div className="space-y-2">
-                          <Field label="Reason code">
-                            {(id) => (
-                              <SelectInput id={id} value={reasonCode} onChange={(e) => setReasonCode(e.target.value as OverrideReasonCode)}>
-                                <option value="">No reason given</option>
-                                {OVERRIDE_REASONS.map((r) => (
-                                  <option key={r} value={r}>
-                                    {r.replace(/_/g, ' ')}
-                                  </option>
-                                ))}
-                              </SelectInput>
-                            )}
-                          </Field>
-                          <Field label="Notes">{(id) => <TextInput id={id} value={notes} maxLength={2000} onChange={(e) => setNotes(e.target.value)} />}</Field>
-                          <div className="flex gap-1.5">
-                            <Button size="sm" variant="primary" busy={busy} onClick={() => void submitOverride('PASS')}>
-                              Pass
-                            </Button>
-                            <Button size="sm" variant="danger" busy={busy} onClick={() => void submitOverride('FAIL')}>
-                              Fail
-                            </Button>
-                            <Button size="sm" busy={busy} onClick={() => void submitOverride('NOT_APPLICABLE')}>
-                              N/A
-                            </Button>
-                            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setOverrideOpen(null)}>
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <Button size="sm" variant="ghost" onClick={() => openOverride(v.criterion_id)}>
-                          Override
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {evaluation.verdicts.map(v => renderVerdict(v))}
           </div>
         </div>
       )}
     </Card>
   );
+
+  const selectedIndex = evaluation?.verdicts.findIndex(v => v.criterion_id === selectedCriterion) ?? -1;
+  const selectedVerdict = selectedIndex >= 0 ? evaluation?.verdicts[selectedIndex] : undefined;
+
+  return (
+    <>
+      <Card title="Scorecard" className="[&>div]:p-3" right={evaluation ? <Button size="sm" onClick={() => openDetails()}>Review scorecard</Button> : <SectionStatePill group={qaGroup} />}>
+        {evaluation ? (
+          <div className="space-y-1.5" role="region" aria-roledescription="carousel" aria-label="Applied rubrics">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-fg truncate" title={rubricDefinition?.name ?? evaluation.rubric.rubric_id}>{rubricDefinition?.name ?? evaluation.rubric.rubric_id}</p>
+                <p className="text-[10px] text-fg-muted">Rubric v{evaluation.rubric.rubric_version} · {isCurrent ? 'Current assessment' : `Earlier application · assessment v${evaluation.version}`}</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button size="sm" variant="ghost" aria-label="Previous rubric" icon={ChevronLeft} disabled={assessmentIndex === 0} onClick={() => setSelectedRubricId(assessments[assessmentIndex - 1].rubric.rubric_id)} />
+                <span className="text-[10px] text-fg-muted tabular-nums" aria-live="polite">{assessmentIndex + 1} / {assessments.length}</span>
+                <Button size="sm" variant="ghost" aria-label="Next rubric" icon={ChevronRight} disabled={assessmentIndex === assessments.length - 1} onClick={() => setSelectedRubricId(assessments[assessmentIndex + 1].rubric.rubric_id)} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-fg tabular-nums">{evaluation.verdicts.some(v => v.status === 'PASS' || v.status === 'FAIL') ? formatScore(evaluation.overall_score) : '—'}</span>
+                <span className="text-xs text-fg-muted">{evaluation.requires_human_review ? 'provisional' : reviewedScore ? 'reviewed / 100' : '/ 100'}</span>
+              </div>
+              <StatusPill tone={evaluation.critical_failure ? 'red' : evaluation.requires_human_review ? 'yellow' : evaluation.passed ? 'green' : 'red'}>
+                {evaluation.critical_failure ? 'Critical fail' : evaluation.requires_human_review ? 'Needs Review' : evaluation.passed ? 'Pass' : 'Fail'}
+              </StatusPill>
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5" role="group" aria-label="Criterion results">
+              {evaluation.verdicts.map((v, index) => {
+                const status = verdictStatusDisplay(v.status);
+                const color = { PASS: 'bg-primer-greenSubtle text-primer-greenFg border-primer-greenBorder', FAIL: 'bg-primer-redSubtle text-primer-redFg border-primer-redBorder', FLAGGED: 'bg-primer-yellowSubtle text-primer-yellowFg border-primer-yellowBorder', NOT_APPLICABLE: 'bg-canvas-inset text-fg-muted border-border' }[v.status];
+                return <button key={v.criterion_id} type="button" ref={el => { if (el) criterionAnchors.current.set(v.criterion_id, el); else criterionAnchors.current.delete(v.criterion_id); }} onClick={() => setSelectedCriterion(selectedCriterion === v.criterion_id ? null : v.criterion_id)} aria-haspopup="dialog" aria-expanded={selectedCriterion === v.criterion_id} aria-controls={selectedCriterion === v.criterion_id ? 'scorecard-criterion-popout' : undefined} title={`${v.criterion_name}: ${status.label}`} aria-label={`Review ${v.criterion_name}`} className={`h-7 w-7 shrink-0 rounded border text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primer-blue hover:brightness-95 ${selectedCriterion === v.criterion_id ? 'ring-2 ring-primer-blue ring-offset-2 ring-offset-canvas-subtle' : ''} ${color}`}>
+                  <span aria-hidden="true">{index + 1}</span><span className="sr-only">{status.label}</span>
+                </button>;
+              })}
+            </div>
+            <p className="text-[11px] text-fg-muted" data-testid="scorecard-counts">{evaluation.verdicts.filter(v => v.status === 'PASS').length} passed · {evaluation.verdicts.filter(v => v.status === 'FAIL').length} failed · {evaluation.verdicts.filter(v => v.status === 'FLAGGED').length} need review · {evaluation.verdicts.filter(v => v.status === 'NOT_APPLICABLE').length} N/A</p>
+            {historyQuery.isFetching && <p className="text-xs text-fg-muted">Loading applied rubrics…</p>}
+            <ErrorNotice error={historyQuery.error} />
+          </div>
+        ) : <EmptyState title={!qaGroup || qaGroup.state === 'disabled' ? 'No scorecard requested' : qaGroup.state === 'failed' ? 'Scoring stopped' : 'Scoring in progress'}>The scorecard appears here once QA finishes.</EmptyState>}
+      </Card>
+      {selectedVerdict && evaluation && <ScorecardPopout key={selectedVerdict.criterion_id}
+        anchor={criterionAnchors.current.get(selectedVerdict.criterion_id) ?? null}
+        title={selectedVerdict.criterion_name}
+        eyebrow={`${rubricDefinition?.name ?? evaluation.rubric.rubric_id} · Check ${selectedIndex + 1} of ${evaluation.verdicts.length}`}
+        onClose={() => setSelectedCriterion(null)}
+        footer={<>
+          <Button size="sm" variant="ghost" icon={ChevronLeft} aria-label="Previous criterion" disabled={selectedIndex === 0 || busy} onClick={() => setSelectedCriterion(evaluation.verdicts[selectedIndex - 1].criterion_id)}>Previous</Button>
+          <span className="text-xs text-fg-muted tabular-nums">{selectedIndex + 1} / {evaluation.verdicts.length}</span>
+          <Button size="sm" variant="ghost" icon={ChevronRight} aria-label="Next criterion" disabled={selectedIndex === evaluation.verdicts.length - 1 || busy} onClick={() => setSelectedCriterion(evaluation.verdicts[selectedIndex + 1].criterion_id)}>Next</Button>
+        </>}>
+        {!isCurrent && <Notice tone="neutral">Earlier rubric application · read-only assessment.</Notice>}
+        {renderVerdict(selectedVerdict, true)}
+        <ErrorNotice error={actionError} />
+        {actionNotice && <Notice tone="green" icon={CheckCircle2}>{actionNotice}</Notice>}
+      </ScorecardPopout>}
+      {detailsOpen && <Dialog title="Review scorecard" size="wide" onClose={() => setDetailsOpen(false)}>{fullScorecard}</Dialog>}
+    </>
+  );
 }
 
 // --- reanalysis ---------------------------------------------------------------------------------
 
-function ReanalysisSection({
+function ReanalysisMenu({
   client,
   callId,
   session,
@@ -1117,6 +1259,8 @@ function ReanalysisSection({
   session: WorkbenchViewProps['session'];
   onWrote: () => void;
 }) {
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [requestOpen, setRequestOpen] = useState(false);
   const [kind, setKind] = useState<ReanalysisKind>('full');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1151,33 +1295,83 @@ function ReanalysisSection({
     }
   }
 
+  const options: { kind: ReanalysisKind; label: string }[] = [
+    { kind: 'full', label: 'Full (everything)' },
+    { kind: 'qa', label: 'QA only' },
+    { kind: 'summary', label: 'Summary only' },
+    { kind: 'contact_signals', label: 'Contact signals only' },
+    { kind: 'embeddings', label: 'Search index only (re-embed)' },
+  ];
+  const closeRequest = () => {
+    setRequestOpen(false);
+    // The menu item that opened this dialog no longer exists. Restore focus to its trigger.
+    queueMicrotask(() => trigger.current?.focus());
+  };
+
   return (
-    <Card title="Request reanalysis" icon={Sparkles}>
-      <div className="space-y-2">
-        <Field label="Kind">
-          {(id) => (
-            <SelectInput id={id} value={kind} onChange={(e) => setKind(e.target.value as ReanalysisKind)}>
-              <option value="full">Full (everything)</option>
-              <option value="qa">QA only</option>
-              <option value="summary">Summary only</option>
-              <option value="contact_signals">Contact signals only</option>
-              <option value="embeddings">Search index only (re-embed)</option>
-            </SelectInput>
-          )}
-        </Field>
-        <Field label="Note" hint="Optional; kept with the request.">
-          {(id) => <TextInput id={id} value={note} maxLength={1000} onChange={(e) => setNote(e.target.value)} />}
-        </Field>
-        <Button icon={RefreshCw} busy={busy} onClick={() => void submit()}>
-          Request
-        </Button>
-        <ErrorNotice error={error} />
-        {notice && (
-          <Notice tone="green" icon={CheckCircle2}>
-            {notice}
-          </Notice>
-        )}
-      </div>
-    </Card>
+    <>
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button
+            ref={trigger}
+            type="button"
+            disabled={busy}
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-canvas px-3 text-sm font-medium text-fg transition-colors hover:bg-canvas-inset focus:outline-none focus-visible:ring-2 focus-visible:ring-primer-blue disabled:opacity-50"
+          >
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            Reanalysis
+            <ChevronDown className="h-3.5 w-3.5 text-fg-muted" aria-hidden="true" />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            align="end"
+            sideOffset={6}
+            collisionPadding={12}
+            onCloseAutoFocus={(event) => { if (requestOpen) event.preventDefault(); }}
+            className="z-50 min-w-60 max-w-[calc(100vw-24px)] rounded-lg border border-border bg-canvas p-1.5 shadow-xl"
+          >
+            <DropdownMenu.Label className="px-2.5 py-2 text-xs font-medium text-fg-muted">
+              Reanalyze this call
+            </DropdownMenu.Label>
+            {options.map((option) => (
+              <DropdownMenu.Item
+                key={option.kind}
+                onSelect={() => {
+                  setKind(option.kind);
+                  setError(null);
+                  setNotice(null);
+                  setRequestOpen(true);
+                }}
+                className="cursor-pointer rounded-md px-2.5 py-2 text-sm text-fg outline-none data-[highlighted]:bg-canvas-inset data-[highlighted]:text-primer-blueFg"
+              >
+                {option.label}
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+      {requestOpen && (
+        <Dialog title="Request reanalysis" onClose={closeRequest} footer={
+          <>
+            <Button onClick={closeRequest}>Close</Button>
+            <Button variant="primary" icon={RefreshCw} busy={busy} onClick={() => void submit()}>Request</Button>
+          </>
+        }>
+          <Field label="Kind">
+            {(id) => (
+              <SelectInput id={id} value={kind} disabled={busy} onChange={(e) => setKind(e.target.value as ReanalysisKind)}>
+                {options.map((option) => <option key={option.kind} value={option.kind}>{option.label}</option>)}
+              </SelectInput>
+            )}
+          </Field>
+          <Field label="Note" hint="Optional; kept with the request.">
+            {(id) => <TextInput id={id} value={note} disabled={busy} maxLength={1000} onChange={(e) => setNote(e.target.value)} />}
+          </Field>
+          <ErrorNotice error={error} />
+          {notice && <Notice tone="green" icon={CheckCircle2}>{notice}</Notice>}
+        </Dialog>
+      )}
+    </>
   );
 }

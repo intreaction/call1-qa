@@ -139,7 +139,7 @@ def test_apply_signals_recipes_installs_the_seed_recipes_into_an_edited_taxonomy
         from call1.store import audit, db
 
         with db.transaction(conn):
-            signal_store.save_taxonomy(conn, SignalTaxonomySave(taxonomy=SignalTaxonomy.model_validate(edited), expected_record_version=3),
+            signal_store.save_taxonomy(conn, SignalTaxonomySave(taxonomy=SignalTaxonomy.model_validate(edited), expected_record_version=signal_store.record(conn).record_version),
                                        actor=audit.installer_actor("test"), account_id=None, parameters=ContractParameters())
     capsys.readouterr()
     assert store_cli.main(["apply-signals-recipes", str(SEED), "--detection", "rules"]) == 0
@@ -160,7 +160,7 @@ def test_the_seed_recipes_pass_the_save_validator_and_select_rules():
     body = SignalTaxonomySave.model_validate(json.loads(SEED.read_text(encoding="utf-8")))
     signal_store.check_taxonomy(body.taxonomy, ContractParameters())
     checked = [c.category_id for c in body.taxonomy.categories if c.recipe.check == "gemma"]
-    assert checked == ["caller_confirms_resolved"]
+    assert checked == ["intent", "caller_confirms_resolved"]
     from call1.contracts.signals import SignalSettings, rules_categories
 
     assert len(rules_categories(body.taxonomy, SignalSettings())) == 10

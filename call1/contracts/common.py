@@ -239,7 +239,7 @@ class ContractParameters(ContractModel):
     max_signal_alert_rules: int = Field(default=50, ge=0, description="Signal alert rules (SQL evaluation cost on read).")
     signal_preview_max_calls: int = Field(default=10, ge=1, le=10, description="Calls in one taxonomy preview (priority +5).")
     signal_backfill_max_calls: int = Field(default=500, ge=1, le=500, description="Calls one signal backfill may request (priority -10).")
-    max_extraction_spans_per_call: int = Field(default=24, ge=1, description="Spans stage 3 extracts per call; spans past the cap stay categorized without fields and the result is partial (extraction_cap).")
+    max_extraction_spans_per_call: int = Field(default=64, ge=1, description="Spans stage 3 extracts per call; spans past the cap stay categorized without fields and the result is partial (extraction_cap).")
     # Contact Signals rules-engine caps (1.4.0; docs/SignalsEmbeddings.md section 9.3). Store's
     # taxonomy save validator reads them; the Pydantic bounds on the recipe models are the ceilings.
     max_signal_recipe_rules: int = Field(default=8, ge=1, le=16, description="Rules in one category recipe's filter (1.4.0).")
@@ -371,4 +371,3 @@ def canonical_json(value: Any) -> bytes:
 def canonical_digest(value: Any) -> str:
     """``sha256:<hex>`` of ``canonical_json(value)``. The only way the contract hashes JSON."""
     return "sha256:" + hashlib.sha256(canonical_json(value)).hexdigest()
-

@@ -8,7 +8,9 @@ Demo mode uses `data/demo/`, persona sign-in and fictional seeded history. `--re
 
 ## Real inference
 
-On Apple Silicon, install `requirements-mlx.txt` in the Python environment. Model weights are separate downloads governed by their own licenses. `model-manifest.json` pins the included models and notices; `python scripts/provision_models.py --help` lists provisioning options. The Process Models page reports installed and missing components. Additional optional models, including embeddings, must be installed at the paths reported by the catalog. Inference itself does not silently download missing models.
+On Apple Silicon, install `requirements-mlx.txt` in the Python environment. Model weights are separate downloads governed by their own licenses. `model-manifest.json` pins the included models and notices; `python scripts/provision_models.py --help` lists provisioning options. The Process Models page reports installed and missing components. The semantic signal pass requires embeddings installed at the paths reported by the catalog. Other optional models use their catalog paths. Inference itself does not silently download missing models.
+
+For Contact Signals, install Ollama **0.40.0 or newer** and run `ollama pull laya`. The default process uses semantic similarity to propose candidates, local Laya decisions to triage them, and Gemma to confirm uncertainty and extract evidence. Process checks the installed Laya digest; the configured endpoint must be loopback (`CALL1_SYSTEM_ONE_URL`, default `http://127.0.0.1:11434`). See [Process](../call1/process/README.md#contact-signals-v2-contract-130) for routing thresholds and limitations.
 
 Run `CALL1_BACKEND=mlx python -m call1.launch --demo --handlers real` with the required weights available. The Process demo studio can import its separately attributed 15.5-second AppTek excerpt. Alternatively import recordings you are authorized to process. The historical five macOS-voice recordings are not distributed.
 

@@ -76,7 +76,7 @@ def semantic_verdict(criterion: RubricCriterion, primary: Optional[QaAssessmentC
 
 def score(criteria: List[RubricCriterion], verdicts: Dict[str, VerdictView], pass_threshold: float) -> Tuple[List[VerdictView], float, bool, bool, bool, List[str]]:
     """``RubricEvaluator.evaluate_deterministic``'s scoring: low confidence is FLAGGED, NOT_APPLICABLE
-    leaves the weight out, a critical FAIL is a critical failure, FLAGGED requires review."""
+    and FLAGGED leave the weight out. FLAGGED makes the score provisional; it is not a failure."""
     total = sum(c.weight for c in criteria)
     earned = 0.0
     critical = False
@@ -99,7 +99,7 @@ def score(criteria: List[RubricCriterion], verdicts: Dict[str, VerdictView], pas
         elif criterion.critical and verdict.status is VerdictStatus.FAIL:
             critical = True
             reasons.append(f"Critical compliance failure on {criterion.criterion_id}: {criterion.name}.")
-        if verdict.status is VerdictStatus.NOT_APPLICABLE:
+        if verdict.status in (VerdictStatus.NOT_APPLICABLE, VerdictStatus.FLAGGED):
             total -= criterion.weight
         if verdict.status is VerdictStatus.FLAGGED:
             review = True
@@ -114,7 +114,7 @@ def score(criteria: List[RubricCriterion], verdicts: Dict[str, VerdictView], pas
 class ScorecardHandler(Handler):
     job_type = JobType.QA_SCORECARD
     adapter_id = "call1.code.scorecard"
-    adapter_version = "1"
+    adapter_version = "2"
 
     def run(self, job: HandlerJob) -> HandlerResult:
         rubric = job.rubric()

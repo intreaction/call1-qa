@@ -298,6 +298,16 @@ class ReviewStaleness(str, Enum):
     """A supervisor explicitly kept the decisions despite a newer machine version."""
 
 
+class ReviewedScore(ContractModel):
+    """Current-version reviewer decisions applied to the pinned rubric; machine artifacts remain unchanged."""
+
+    evaluation_version: int = Field(ge=1)
+    overall_score: float = Field(ge=0, le=100)
+    passed: bool
+    critical_failure: bool
+    requires_human_review: bool
+
+
 class CallReviewState(ContractModel):
     call_id: ResourceId
     review_version: int = Field(ge=0, description="Bumped by every review write; the expected-version token.")
@@ -309,6 +319,7 @@ class CallReviewState(ContractModel):
     escalation_resolved_at: Optional[Timestamp] = None
     reviewer_notes: Optional[SafeText] = None
     overrides: List[VerdictOverrideRecord] = Field(default_factory=list)
+    reviewed_score: Optional[ReviewedScore] = Field(default=None, description="Score after the latest override per criterion of the current evaluation. Absent for stale decisions or no overrides; never changes the immutable machine scorecard.")
     retained_by_account_id: Optional[ResourceId] = None
     retained_at: Optional[Timestamp] = None
     updated_at: Timestamp
